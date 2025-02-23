@@ -108,14 +108,10 @@ cargo run --release
 The project uses `.env` for configuration. Create a `.env` file in the root directory with the following variables:
 
 - `NEBIUS_API_KEY` - API key for the Nebius AI service (required for game rules explanation)
-- `DEEPSEEK_API_KEY` - API key for the DeepSeek AI service (alternative AI service)
 
 Example `.env` file:
 ```env
 NEBIUS_API_KEY=your_nebius_api_key_here
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
 Note: The game will still work without these API keys, but the AI-powered rules explanation feature will not be available.
-
-## License
