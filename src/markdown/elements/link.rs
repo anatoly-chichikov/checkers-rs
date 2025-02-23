@@ -25,3 +25,59 @@ impl Element for Link {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::style::{ResetColor, SetForegroundColor};
+
+    #[test]
+    fn test_link_render() -> io::Result<()> {
+        let link = Link::new("Click here".to_string(), "https://example.com".to_string());
+        let mut writer = StyleWriter::new();
+        link.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}Click here{}",
+                SetForegroundColor(Color::Blue),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_link_with_empty_url() -> io::Result<()> {
+        let link = Link::new("Text only".to_string(), "".to_string());
+        let mut writer = StyleWriter::new();
+        link.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!("{}Text only{}", SetForegroundColor(Color::Blue), ResetColor)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_link_with_spaces() -> io::Result<()> {
+        let link = Link::new("  Link with spaces  ".to_string(), "url".to_string());
+        let mut writer = StyleWriter::new();
+        link.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}  Link with spaces  {}",
+                SetForegroundColor(Color::Blue),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+}

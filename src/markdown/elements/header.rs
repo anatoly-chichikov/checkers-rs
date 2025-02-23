@@ -40,3 +40,81 @@ impl Element for Header {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::style::{ResetColor, SetForegroundColor};
+
+    #[test]
+    fn test_header_level_1() -> io::Result<()> {
+        let header = Header::new(1, "Title".to_string());
+        let mut writer = StyleWriter::new();
+        header.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}TITLE{}\n",
+                SetForegroundColor(Color::Magenta),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_header_level_2() -> io::Result<()> {
+        let header = Header::new(2, "Subtitle".to_string());
+        let mut writer = StyleWriter::new();
+        header.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}  SUBTITLE{}\n",
+                SetForegroundColor(Color::Magenta),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_header_with_whitespace() -> io::Result<()> {
+        let header = Header::new(1, "  Title with spaces  ".to_string());
+        let mut writer = StyleWriter::new();
+        header.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}TITLE WITH SPACES{}\n",
+                SetForegroundColor(Color::Magenta),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_header_invalid_level() -> io::Result<()> {
+        let header = Header::new(7, "Invalid level".to_string());
+        let mut writer = StyleWriter::new();
+        header.render(&mut writer)?;
+        let result = writer.into_string()?;
+
+        assert_eq!(
+            result,
+            format!(
+                "{}INVALID LEVEL{}\n",
+                SetForegroundColor(Color::Magenta),
+                ResetColor
+            )
+        );
+        Ok(())
+    }
+}
