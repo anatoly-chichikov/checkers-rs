@@ -7,6 +7,12 @@ pub struct StyleWriter {
     current_color: Option<Color>,
 }
 
+impl Default for StyleWriter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StyleWriter {
     pub fn new() -> Self {
         Self {
