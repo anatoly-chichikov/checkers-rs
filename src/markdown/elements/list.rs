@@ -11,15 +11,6 @@ pub struct ListItem {
 }
 
 impl ListItem {
-    #[allow(dead_code)]
-    pub fn new(text: String) -> Self {
-        Self {
-            text,
-            is_bold: false,
-            is_italic: false,
-        }
-    }
-
     pub fn with_formatting(text: String, is_bold: bool, is_italic: bool) -> Self {
         Self {
             text,
