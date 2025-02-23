@@ -122,4 +122,4 @@ fn test_newlines() -> std::io::Result<()> {
 
     assert_eq!(plain, "Line 1\n\nLine 2\nLine 3");
     Ok(())
-} 
+}

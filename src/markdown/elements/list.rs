@@ -11,12 +11,19 @@ pub struct ListItem {
 }
 
 impl ListItem {
-    pub fn with_formatting(text: String, is_bold: bool, is_italic: bool) -> Self {
+    pub fn new(text: String) -> Self {
         Self {
             text,
-            is_bold,
-            is_italic,
+            is_bold: false,
+            is_italic: false,
         }
+    }
+
+    pub fn with_formatting(text: String, is_bold: bool, is_italic: bool) -> Self {
+        let mut item = Self::new(text);
+        item.is_bold = is_bold;
+        item.is_italic = is_italic;
+        item
     }
 }
 
@@ -34,4 +41,4 @@ impl Element for ListItem {
         writer.write_plain("\n")?;
         Ok(())
     }
-} 
+}

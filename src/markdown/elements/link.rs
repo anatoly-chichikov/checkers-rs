@@ -24,4 +24,4 @@ impl Element for Link {
         writer.write_colored(&self.text, Color::Blue)?;
         Ok(())
     }
-} 
+}

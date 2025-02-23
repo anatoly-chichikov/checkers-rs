@@ -1,12 +1,12 @@
-pub mod header;
-pub mod list;
 pub mod code;
+pub mod header;
 pub mod link;
+pub mod list;
 
-use std::io;
 use super::style::StyleWriter;
+use std::io;
 
 // Common trait for all markdown elements
 pub trait Element {
     fn render(&self, writer: &mut StyleWriter) -> io::Result<()>;
-} 
+}

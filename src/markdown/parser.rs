@@ -1,14 +1,8 @@
-use std::io;
 use crossterm::style::Color;
+use std::io;
 
 use super::{
-    elements::{
-        code::CodeBlock,
-        header::Header,
-        link::Link,
-        list::ListItem,
-        Element,
-    },
+    elements::{code::CodeBlock, header::Header, link::Link, list::ListItem, Element},
     style::StyleWriter,
 };
 
@@ -41,7 +35,7 @@ impl MarkdownRenderer {
                         level += 1;
                         chars.next();
                     }
-                    
+
                     // Skip whitespace
                     while chars.peek() == Some(&' ') {
                         chars.next();
@@ -162,7 +156,7 @@ impl MarkdownRenderer {
                         chars.next();
                         let mut text = String::new();
                         let mut nested_italic = false;
-                        
+
                         while let Some(&next) = chars.peek() {
                             match next {
                                 '*' => {
@@ -187,7 +181,14 @@ impl MarkdownRenderer {
                             }
                         }
                         if !text.is_empty() {
-                            self.writer.write_colored(&text, if nested_italic { Color::Cyan } else { Color::Green })?;
+                            self.writer.write_colored(
+                                &text,
+                                if nested_italic {
+                                    Color::Cyan
+                                } else {
+                                    Color::Green
+                                },
+                            )?;
                         }
                     } else {
                         let mut text = String::new();
@@ -210,4 +211,4 @@ impl MarkdownRenderer {
 
         self.writer.clone().into_string()
     }
-} 
+}
