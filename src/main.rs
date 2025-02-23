@@ -5,6 +5,7 @@ mod piece;
 mod ui;
 mod ai;
 mod markdown_renderer;
+mod messages;
 
 use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
@@ -16,8 +17,9 @@ use std::io::{self, stdout, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use input::{CursorDirection, GameInput};
-use ui::UI;
+use crate::input::{CursorDirection, GameInput};
+use crate::ui::UI;
+use crate::game::CheckersGame;
 use crate::markdown_renderer::MarkdownRenderer;
 
 fn cleanup_terminal() -> io::Result<()> {
@@ -34,17 +36,17 @@ fn format_model_output(message: &str) -> std::io::Result<String> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Try to get AI explanation of rules if API key is available
+    // Try to get AI story about checkers if API key is available
     let welcome_message = match ai::explain_rules().await {
         Ok(rules) => format!("# Welcome to Checkers!\n\n{}", rules),
         Err(ai::AIError::NoApiKey) => String::from(
             "# Welcome to Checkers!\n\n\
             This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\
-            *Note: Add NEBIUS_API_KEY to your .env file to enable AI-powered rule explanations.*\n\n\
+            *Note: Add NEBIUS_API_KEY to your .env file to enable AI-powered stories about checkers.*\n\n\
             Press Enter to start the game..."
         ),
         Err(e) => {
-            eprintln!("Failed to get game rules from AI: {}", e);
+            eprintln!("Failed to get checkers story from AI: {}", e);
             String::from(
                 "# Welcome to Checkers!\n\n\
                 This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\

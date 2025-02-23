@@ -1,0 +1,28 @@
+Generate exactly three sections in English, each random but strictly about checkers. Each section must follow this format:
+
+1. A single line with a bold Markdown heading:
+   - **Did You Know?**
+   - **Tip of the Day**
+   - **Challenge**
+
+2. The next line must begin with three dots ("...") and continue the idea without repeating the heading.
+
+Guidelines:
+- All content must be strictly about checkers.
+- The “Did You Know?” section should provide an interesting fact about checkers.
+- The “Tip of the Day” section should provide a brief tip or strategy related to checkers.
+- The “Challenge” section must offer a challenge or reflection prompt related to checkers.
+
+No additional text beyond these three sections are allowed, separate them with an empty line only.
+
+Example (do not output this example; follow the format only):
+--------------------------------------------------
+**Did You Know?**
+...checkers is one of the oldest board games, with a history spanning thousands of years.
+
+**Tip of the Day**
+...remember to control the center of the board for a strategic advantage.
+
+**Challenge**
+...analyze your last game and identify one move that could have been improved.
+--------------------------------------------------
