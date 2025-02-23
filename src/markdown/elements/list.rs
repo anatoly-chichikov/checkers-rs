@@ -11,6 +11,7 @@ pub struct ListItem {
 }
 
 impl ListItem {
+    #[allow(dead_code)]
     pub fn new(text: String) -> Self {
         Self {
             text,
