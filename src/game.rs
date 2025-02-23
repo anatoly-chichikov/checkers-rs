@@ -40,6 +40,12 @@ impl CheckersGame {
             return Err(GameError::OutOfBounds);
         }
 
+        // If selecting the same piece that's already selected, deselect it
+        if self.selected_piece == Some((row, col)) {
+            self.selected_piece = None;
+            return Ok(());
+        }
+
         match self.board.get_piece(row, col) {
             Some(piece) if piece.color == self.current_player => {
                 self.selected_piece = Some((row, col));

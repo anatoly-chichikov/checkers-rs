@@ -362,4 +362,53 @@ fn test_stalemate_condition() {
     game.board.set_piece(6, 1, None);
     game.board.set_piece(5, 2, None);
     assert!(!game.is_stalemate());
+}
+
+#[test]
+fn test_toggle_piece_selection() {
+    let mut game = CheckersGame::new();
+
+    // Select a white piece at (5, 0)
+    assert!(game.select_piece(5, 0).is_ok());
+    assert_eq!(game.selected_piece, Some((5, 0)));
+
+    // Toggle selection off by selecting the same piece
+    assert!(game.select_piece(5, 0).is_ok());
+    assert_eq!(game.selected_piece, None);
+
+    // Select the piece again
+    assert!(game.select_piece(5, 0).is_ok());
+    assert_eq!(game.selected_piece, Some((5, 0)));
+
+    // Select a different valid piece - should switch selection
+    assert!(game.select_piece(5, 2).is_ok());
+    assert_eq!(game.selected_piece, Some((5, 2)));
+}
+
+#[test]
+fn test_toggle_piece_selection_with_no_moves() {
+    let mut game = CheckersGame::new();
+    
+    // Clear the board first
+    for row in 0..game.board.size {
+        for col in 0..game.board.size {
+            game.board.set_piece(row, col, None);
+        }
+    }
+    
+    // Place a white piece in a position with no moves
+    let white_piece = Piece::new(Color::White);
+    game.board.set_piece(7, 0, Some(white_piece));
+    
+    // Place black pieces to block all possible moves
+    let black_piece = Piece::new(Color::Black);
+    game.board.set_piece(6, 1, Some(black_piece));
+    
+    // Select the white piece
+    assert!(game.select_piece(7, 0).is_ok());
+    assert_eq!(game.selected_piece, Some((7, 0)));
+    
+    // Toggle selection off even though there are no moves
+    assert!(game.select_piece(7, 0).is_ok());
+    assert_eq!(game.selected_piece, None);
 } 
