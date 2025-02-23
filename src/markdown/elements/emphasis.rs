@@ -45,7 +45,7 @@ impl Emphasis {
                         }
                         writer.write_colored(&nested_text, Color::Green)?;
                     } else {
-                        while let Some(c) = chars.next() {
+                        for c in chars.by_ref() {
                             if c == '*' {
                                 break;
                             }
