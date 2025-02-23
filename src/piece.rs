@@ -39,4 +39,4 @@ impl Piece {
             (Color::Black, true) => 'B',
         }
     }
-} 
+}

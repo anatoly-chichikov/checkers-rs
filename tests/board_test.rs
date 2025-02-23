@@ -107,4 +107,4 @@ fn test_invalid_moves() {
 
     // Test moving from out of bounds
     assert!(!board.move_piece((8, 8), (3, 3)));
-} 
+}
