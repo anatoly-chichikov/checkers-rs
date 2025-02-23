@@ -24,8 +24,8 @@ A simple terminal-based Checkers game with arrow key navigation.
 
 **Controls:**
 - **Arrow keys:** Navigate the board
-- **Enter:** Select and move pieces
-- **Esc:** Exit the game
+- **Space or Enter:** Select/deselect pieces and make moves
+- **Esc or Q:** Exit the game
 
 **Testing:**
 Run tests with:
