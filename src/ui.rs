@@ -13,6 +13,12 @@ pub struct UI {
     cursor_pos: (usize, usize),
 }
 
+impl Default for UI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UI {
     pub fn new() -> Self {
         Self { cursor_pos: (0, 0) }
