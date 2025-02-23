@@ -24,7 +24,7 @@ pub fn read_input() -> io::Result<Option<GameInput>> {
                 KeyCode::Down => GameInput::MoveCursor(CursorDirection::Down),
                 KeyCode::Left => GameInput::MoveCursor(CursorDirection::Left),
                 KeyCode::Right => GameInput::MoveCursor(CursorDirection::Right),
-                KeyCode::Char(' ') => GameInput::Select,
+                KeyCode::Char(' ') | KeyCode::Enter => GameInput::Select,
                 KeyCode::Char('q') | KeyCode::Esc => GameInput::Quit,
                 _ => return Ok(None),
             }));

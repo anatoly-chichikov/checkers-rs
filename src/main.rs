@@ -91,23 +91,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 GameInput::Select => {
                     let (row, col) = ui.get_cursor();
-                    match game.selected_piece {
-                        None => {
-                            if let Err(e) = game.select_piece(row, col) {
-                                // Move to bottom of screen and show error
-                                stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
-                                writeln!(stdout, "{}", error_msg)?;
-                                stdout.flush()?;
+                    // If we have a selected piece and cursor is on it, deselect it
+                    if game.selected_piece == Some((row, col)) {
+                        game.selected_piece = None;
+                    } else {
+                        match game.selected_piece {
+                            None => {
+                                if let Err(e) = game.select_piece(row, col) {
+                                    // Move to bottom of screen and show error
+                                    stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
+                                    let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    writeln!(stdout, "{}", error_msg)?;
+                                    stdout.flush()?;
+                                }
                             }
-                        }
-                        Some(_) => {
-                            if let Err(e) = game.make_move(row, col) {
-                                // Move to bottom of screen and show error
-                                stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
-                                writeln!(stdout, "{}", error_msg)?;
-                                stdout.flush()?;
+                            Some(_) => {
+                                if let Err(e) = game.make_move(row, col) {
+                                    // Move to bottom of screen and show error
+                                    stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
+                                    let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    writeln!(stdout, "{}", error_msg)?;
+                                    stdout.flush()?;
+                                }
                             }
                         }
                     }
