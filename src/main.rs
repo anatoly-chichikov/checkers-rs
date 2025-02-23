@@ -34,21 +34,30 @@ fn format_model_output(message: &str) -> std::io::Result<String> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Get AI explanation of rules
-    let rules = match ai::explain_rules().await {
-        Ok(rules) => rules,
+    // Try to get AI explanation of rules if API key is available
+    let welcome_message = match ai::explain_rules().await {
+        Ok(rules) => format!("# Welcome to Checkers!\n\n{}", rules),
+        Err(ai::AIError::NoApiKey) => String::from(
+            "# Welcome to Checkers!\n\n\
+            This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\
+            *Note: Add NEBIUS_API_KEY to your .env file to enable AI-powered rule explanations.*\n\n\
+            Press Enter to start the game..."
+        ),
         Err(e) => {
             eprintln!("Failed to get game rules from AI: {}", e);
-            eprintln!("Please check your API key and internet connection.");
-            return Ok(());
+            String::from(
+                "# Welcome to Checkers!\n\n\
+                This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\
+                Press Enter to start the game..."
+            )
         }
     };
     
-    // Format and display the rules using MarkdownRenderer
-    let formatted_rules = format_model_output(&format!("# Welcome to Checkers!\n\n{}", rules))?;
+    // Format and display the welcome message using MarkdownRenderer
+    let formatted_message = format_model_output(&welcome_message)?;
     
     // Use write! macro to properly display ANSI color codes
-    write!(io::stdout(), "{}\n\nPress Enter to start the game...", formatted_rules)?;
+    write!(io::stdout(), "{}\n\n", formatted_message)?;
     io::stdout().flush()?;
     
     let mut input = String::new();
