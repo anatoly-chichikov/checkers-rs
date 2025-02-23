@@ -48,7 +48,7 @@ pub enum AIError {
     IOError(#[from] io::Error),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct NebiusRequest {
     model: String,
     messages: Vec<Message>,
@@ -58,30 +58,30 @@ struct NebiusRequest {
     top_k: u32,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct Message {
     role: String,
     content: Vec<Content>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct Content {
     #[serde(rename = "type")]
     content_type: String,
     text: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 struct NebiusResponse {
     choices: Vec<Choice>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 struct Choice {
     message: ResponseMessage,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 struct ResponseMessage {
     content: String,
 }

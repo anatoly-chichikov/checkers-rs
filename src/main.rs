@@ -19,7 +19,6 @@ use std::sync::Arc;
 
 use crate::input::{CursorDirection, GameInput};
 use crate::ui::UI;
-use crate::game::CheckersGame;
 use crate::markdown_renderer::MarkdownRenderer;
 
 fn cleanup_terminal() -> io::Result<()> {
@@ -39,19 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Try to get AI story about checkers if API key is available
     let welcome_message = match ai::explain_rules().await {
         Ok(rules) => format!("# Welcome to Checkers!\n\n{}", rules),
-        Err(ai::AIError::NoApiKey) => String::from(
-            "# Welcome to Checkers!\n\n\
-            This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\
-            *Note: Add NEBIUS_API_KEY to your .env file to enable AI-powered stories about checkers.*\n\n\
-            Press Enter to start the game..."
-        ),
+        Err(ai::AIError::NoApiKey) => String::from(messages::WELCOME_MESSAGE_NO_API),
         Err(e) => {
             eprintln!("Failed to get checkers story from AI: {}", e);
-            String::from(
-                "# Welcome to Checkers!\n\n\
-                This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\
-                Press Enter to start the game..."
-            )
+            String::from(messages::WELCOME_MESSAGE_ERROR)
         }
     };
     
@@ -106,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Err(e) = game.select_piece(row, col) {
                                 // Move to bottom of screen and show error
                                 stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                let error_msg = format_model_output(&format!("**Error:** {}", e))?;
+                                let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
                                 writeln!(stdout, "{}", error_msg)?;
                                 stdout.flush()?;
                             }
@@ -115,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Err(e) = game.make_move(row, col) {
                                 // Move to bottom of screen and show error
                                 stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                let error_msg = format_model_output(&format!("**Error:** {}", e))?;
+                                let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
                                 writeln!(stdout, "{}", error_msg)?;
                                 stdout.flush()?;
                             }
