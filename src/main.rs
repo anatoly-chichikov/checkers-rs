@@ -4,6 +4,7 @@ mod input;
 mod piece;
 mod ui;
 mod ai;
+mod markdown_renderer;
 
 use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
@@ -17,12 +18,18 @@ use std::sync::Arc;
 
 use input::{CursorDirection, GameInput};
 use ui::UI;
+use crate::markdown_renderer::MarkdownRenderer;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
     stdout.execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
     Ok(())
+}
+
+fn format_model_output(message: &str) -> std::io::Result<String> {
+    let mut renderer = MarkdownRenderer::new();
+    renderer.render(message)
 }
 
 #[tokio::main]
@@ -37,10 +44,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     
-    // Display rules and wait for user input
-    println!("Welcome to Checkers!\n");
-    println!("Game Rules:\n{}\n", rules);
-    println!("Press Enter to start the game...");
+    // Format and display the rules using MarkdownRenderer
+    let formatted_rules = format_model_output(&format!("# Welcome to Checkers!\n\n{}", rules))?;
+    
+    // Use write! macro to properly display ANSI color codes
+    write!(io::stdout(), "{}\n\nPress Enter to start the game...", formatted_rules)?;
+    io::stdout().flush()?;
+    
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
@@ -85,7 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Err(e) = game.select_piece(row, col) {
                                 // Move to bottom of screen and show error
                                 stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                writeln!(stdout, "Error: {}", e)?;
+                                let error_msg = format_model_output(&format!("**Error:** {}", e))?;
+                                writeln!(stdout, "{}", error_msg)?;
                                 stdout.flush()?;
                             }
                         }
@@ -93,7 +104,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Err(e) = game.make_move(row, col) {
                                 // Move to bottom of screen and show error
                                 stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                writeln!(stdout, "Error: {}", e)?;
+                                let error_msg = format_model_output(&format!("**Error:** {}", e))?;
+                                writeln!(stdout, "{}", error_msg)?;
                                 stdout.flush()?;
                             }
                         }
