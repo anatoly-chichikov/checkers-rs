@@ -14,7 +14,7 @@ A simple terminal-based Checkers game with arrow key navigation.
    ```
 2. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/checkers-rs.git
+   git clone https://github.com/anatoly-chichikov/checkers-rs.git
    cd checkers-rs
    ```
 3. **Run the game:**
