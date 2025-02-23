@@ -5,6 +5,14 @@ edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "A terminal-based Checkers game with arrow key navigation"
 
+[lib]
+name = "checkers_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "checkers-rs"
+path = "src/main.rs"
+
 [dependencies]
 crossterm = "0.27"
 thiserror = "1.0"

@@ -14,6 +14,8 @@ use crossterm::{
     ExecutableCommand,
 };
 
+use super::messages;
+
 struct LoadingAnimation {
     frames: Vec<&'static str>,
     current: usize,
@@ -99,7 +101,7 @@ pub async fn explain_rules() -> Result<String, AIError> {
     let mut loading = LoadingAnimation::new();
     let loading_thread = thread::spawn(move || {
         while running_clone.load(Ordering::Relaxed) {
-            print!("\r{} Waiting for AI response...", loading.next());
+            print!("\r{} {}", loading.next(), messages::LOADING_MESSAGE);
             if let Err(_) = io::stdout().flush() {
                 break;
             }
@@ -109,16 +111,16 @@ pub async fn explain_rules() -> Result<String, AIError> {
 
     let client = Client::new();
     let request = NebiusRequest {
-        model: "meta-llama/Meta-Llama-3.1-8B-Instruct".to_string(),
+        model: "meta-llama/Llama-3.2-1B-Instruct".to_string(),
         messages: vec![Message {
             role: "user".to_string(),
             content: vec![Content {
                 content_type: "text".to_string(),
-                text: "Please explain the rules of checkers (draughts) in a clear, concise way that a beginner can understand. Include basic movement, capturing, and winning conditions.".to_string(),
+                text: messages::STORY_PROMPT.to_string(),
             }],
         }],
         max_tokens: 512,
-        temperature: 0.6,
+        temperature: 0.0,
         top_p: 0.9,
         top_k: 50,
     };
@@ -141,23 +143,10 @@ pub async fn explain_rules() -> Result<String, AIError> {
     stdout.execute(Clear(ClearType::CurrentLine))?;
     stdout.execute(Show)?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response.text().await
-            .map_err(|e| AIError::RequestFailed(e.to_string()))?;
-        return Err(AIError::RequestFailed(format!(
-            "API returned error status: {} with body: {}",
-            status, error_text
-        )));
-    }
-
-    let response_text = response
-        .text()
+    let response_data: NebiusResponse = response
+        .json()
         .await
-        .map_err(|e| AIError::RequestFailed(e.to_string()))?;
-
-    let response: NebiusResponse = serde_json::from_str(&response_text)
         .map_err(|e| AIError::ParseError(e.to_string()))?;
 
-    Ok(response.choices[0].message.content.clone())
+    Ok(response_data.choices[0].message.content.clone())
 } 
