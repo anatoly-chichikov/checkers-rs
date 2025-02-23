@@ -2,7 +2,7 @@ mod ai;
 mod board;
 mod game;
 mod input;
-mod markdown_renderer;
+mod markdown;
 mod messages;
 mod piece;
 mod ui;
@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::input::{CursorDirection, GameInput};
-use crate::markdown_renderer::MarkdownRenderer;
+use crate::markdown::parser::MarkdownRenderer;
 use crate::ui::UI;
 
 fn cleanup_terminal() -> io::Result<()> {
