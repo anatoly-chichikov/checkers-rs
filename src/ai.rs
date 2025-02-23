@@ -102,7 +102,7 @@ pub async fn explain_rules() -> Result<String, AIError> {
     let loading_thread = thread::spawn(move || {
         while running_clone.load(Ordering::Relaxed) {
             print!("\r{} {}", loading.next(), messages::LOADING_MESSAGE);
-            if let Err(_) = io::stdout().flush() {
+            if io::stdout().flush().is_err() {
                 break;
             }
             thread::sleep(Duration::from_millis(100));

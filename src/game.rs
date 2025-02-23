@@ -23,6 +23,12 @@ pub struct CheckersGame {
     pub selected_piece: Option<(usize, usize)>,
 }
 
+impl Default for CheckersGame {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CheckersGame {
     pub fn new() -> Self {
         let mut board = Board::new(8);
@@ -127,10 +133,8 @@ impl CheckersGame {
                 let next_row = (row as i32 + row_diff) as usize;
                 let next_col = (col as i32 + col_diff) as usize;
 
-                if self.board.in_bounds(next_row, next_col) {
-                    if self.is_valid_move(row, col, next_row, next_col, &piece) {
-                        return true;
-                    }
+                if self.board.in_bounds(next_row, next_col) && self.is_valid_move(row, col, next_row, next_col, &piece) {
+                    return true;
                 }
             }
         }
@@ -240,10 +244,8 @@ impl CheckersGame {
                             let to_row = (row as i32 + row_diff) as usize;
                             let to_col = (col as i32 + col_diff) as usize;
 
-                            if self.board.in_bounds(to_row, to_col) {
-                                if self.is_valid_move(row, col, to_row, to_col, &piece) {
-                                    return true;
-                                }
+                            if self.board.in_bounds(to_row, to_col) && self.is_valid_move(row, col, to_row, to_col, &piece) {
+                                return true;
                             }
                         }
                     }
@@ -283,10 +285,8 @@ impl CheckersGame {
                                 Err(_) => continue,
                             };
 
-                            if self.board.in_bounds(to_row, to_col) {
-                                if self.is_valid_move(row, col, to_row, to_col, &piece) {
-                                    return false;
-                                }
+                            if self.board.in_bounds(to_row, to_col) && self.is_valid_move(row, col, to_row, to_col, &piece) {
+                                return false;
                             }
                         }
                     }

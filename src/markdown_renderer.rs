@@ -5,6 +5,12 @@ pub struct MarkdownRenderer {
     output: Vec<u8>,
 }
 
+impl Default for MarkdownRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MarkdownRenderer {
     pub fn new() -> Self {
         Self { output: Vec::new() }
@@ -109,11 +115,11 @@ impl MarkdownRenderer {
         // Write the header with proper indentation
         write!(self.output, "{}", SetForegroundColor(Color::Magenta))?;
         if header_level == 1 {
-            write!(self.output, "{}\n", text.trim().to_uppercase())?;
+            writeln!(self.output, "{}", text.trim().to_uppercase())?;
         } else {
-            write!(
+            writeln!(
                 self.output,
-                "{}{}\n",
+                "{}{}",
                 indentation,
                 text.trim().to_uppercase()
             )?;
@@ -182,7 +188,7 @@ impl MarkdownRenderer {
             write!(self.output, "{}", text)?;
         }
 
-        write!(self.output, "\n")?;
+        writeln!(self.output)?;
         Ok(())
     }
 
@@ -230,7 +236,7 @@ impl MarkdownRenderer {
 
         // Inline code
         let mut code = String::new();
-        while let Some(ch) = chars.next() {
+        for ch in chars.by_ref() {
             if ch == '`' {
                 break;
             }
@@ -261,7 +267,7 @@ impl MarkdownRenderer {
         let mut text = String::new();
         let mut found_closing_bracket = false;
 
-        while let Some(ch) = chars.next() {
+        for ch in chars.by_ref() {
             if ch == ']' {
                 found_closing_bracket = true;
                 break;
@@ -272,7 +278,7 @@ impl MarkdownRenderer {
         if found_closing_bracket && chars.peek() == Some(&'(') {
             chars.next();
             // Skip URL
-            while let Some(ch) = chars.next() {
+            for ch in chars.by_ref() {
                 if ch == ')' {
                     break;
                 }
@@ -455,7 +461,7 @@ impl MarkdownRenderer {
                     last_was_newline = false;
                 }
                 '\n' => {
-                    write!(self.output, "\n")?;
+                    writeln!(self.output)?;
                     last_was_newline = true;
                 }
                 _ => {
