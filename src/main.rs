@@ -1,25 +1,24 @@
+mod ai;
 mod board;
 mod game;
 mod input;
-mod piece;
-mod ui;
-mod ai;
 mod markdown_renderer;
 mod messages;
+mod piece;
+mod ui;
 
 use crossterm::{
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     cursor::MoveTo,
-    ExecutableCommand,
-    QueueableCommand,
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand, QueueableCommand,
 };
 use std::io::{self, stdout, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::input::{CursorDirection, GameInput};
-use crate::ui::UI;
 use crate::markdown_renderer::MarkdownRenderer;
+use crate::ui::UI;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -44,14 +43,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             String::from(messages::WELCOME_MESSAGE_ERROR)
         }
     };
-    
+
     // Format and display the welcome message using MarkdownRenderer
     let formatted_message = format_model_output(&welcome_message)?;
-    
+
     // Use write! macro to properly display ANSI color codes
     write!(io::stdout(), "{}\n\n", formatted_message)?;
     io::stdout().flush()?;
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
@@ -60,7 +59,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = running.clone();
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     // Setup terminal
     let mut stdout = stdout();
@@ -100,7 +100,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Err(e) = game.select_piece(row, col) {
                                     // Move to bottom of screen and show error
                                     stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                    let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    let error_msg = format_model_output(&format!(
+                                        "{} {}",
+                                        messages::ERROR_PREFIX,
+                                        e
+                                    ))?;
                                     writeln!(stdout, "{}", error_msg)?;
                                     stdout.flush()?;
                                 }
@@ -109,7 +113,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Err(e) = game.make_move(row, col) {
                                     // Move to bottom of screen and show error
                                     stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
-                                    let error_msg = format_model_output(&format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    let error_msg = format_model_output(&format!(
+                                        "{} {}",
+                                        messages::ERROR_PREFIX,
+                                        e
+                                    ))?;
                                     writeln!(stdout, "{}", error_msg)?;
                                     stdout.flush()?;
                                 }
@@ -127,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.render_game(&game)?;
             break;
         }
-        
+
         // Check for stalemate
         if game.is_stalemate() {
             game.is_game_over = true;
@@ -151,11 +159,12 @@ mod tests {
     fn test_ctrl_c_handler() {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
-        
+
         // Set up the Ctrl+C handler
         ctrlc::set_handler(move || {
             r.store(false, Ordering::SeqCst);
-        }).expect("Error setting Ctrl-C handler");
+        })
+        .expect("Error setting Ctrl-C handler");
 
         // Verify initial state
         assert!(running.load(Ordering::SeqCst));

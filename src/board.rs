@@ -88,4 +88,4 @@ impl Board {
             Color::Black => row == self.size - 1,
         }
     }
-} 
+}

@@ -1,18 +1,19 @@
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use std::{
-    env, thread,
-    time::Duration,
-    io::{self, Write},
-    sync::atomic::{AtomicBool, Ordering},
-    sync::Arc,
-};
-use thiserror::Error;
 use crossterm::{
     cursor::{Hide, Show},
     terminal::{Clear, ClearType},
     ExecutableCommand,
 };
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use std::{
+    env,
+    io::{self, Write},
+    sync::atomic::{AtomicBool, Ordering},
+    sync::Arc,
+    thread,
+    time::Duration,
+};
+use thiserror::Error;
 
 use super::messages;
 
@@ -88,16 +89,15 @@ struct ResponseMessage {
 
 pub async fn explain_rules() -> Result<String, AIError> {
     dotenv::dotenv().ok();
-    
-    let api_key = env::var("NEBIUS_API_KEY")
-        .map_err(|_| AIError::NoApiKey)?;
+
+    let api_key = env::var("NEBIUS_API_KEY").map_err(|_| AIError::NoApiKey)?;
 
     let mut stdout = io::stdout();
     stdout.execute(Hide)?;
-    
+
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = running.clone();
-    
+
     let mut loading = LoadingAnimation::new();
     let loading_thread = thread::spawn(move || {
         while running_clone.load(Ordering::Relaxed) {
@@ -138,7 +138,7 @@ pub async fn explain_rules() -> Result<String, AIError> {
     // Stop the loading animation and cleanup
     running.store(false, Ordering::Relaxed);
     let _ = loading_thread.join();
-    
+
     let mut stdout = io::stdout();
     stdout.execute(Clear(ClearType::CurrentLine))?;
     stdout.execute(Show)?;
@@ -149,4 +149,4 @@ pub async fn explain_rules() -> Result<String, AIError> {
         .map_err(|e| AIError::ParseError(e.to_string()))?;
 
     Ok(response_data.choices[0].message.content.clone())
-} 
+}

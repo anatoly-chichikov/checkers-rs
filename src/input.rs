@@ -31,4 +31,4 @@ pub fn read_input() -> io::Result<Option<GameInput>> {
         }
     }
     Ok(None)
-} 
+}

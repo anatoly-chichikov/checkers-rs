@@ -58,13 +58,16 @@ impl CheckersGame {
 
     pub fn make_move(&mut self, to_row: usize, to_col: usize) -> Result<(), GameError> {
         let (from_row, from_col) = self.selected_piece.ok_or(GameError::NoPieceSelected)?;
-        
+
         if !self.board.in_bounds(to_row, to_col) {
             return Err(GameError::OutOfBounds);
         }
 
-        let piece = self.board.get_piece(from_row, from_col).ok_or(GameError::NoPieceSelected)?;
-        
+        let piece = self
+            .board
+            .get_piece(from_row, from_col)
+            .ok_or(GameError::NoPieceSelected)?;
+
         // Check if there are any captures available
         if self.has_captures_available() {
             let row_diff = (to_row as i32 - from_row as i32).abs();
@@ -87,7 +90,8 @@ impl CheckersGame {
         }
 
         // Move the piece
-        self.board.move_piece((from_row, from_col), (to_row, to_col));
+        self.board
+            .move_piece((from_row, from_col), (to_row, to_col));
 
         // Check for promotion and promote if necessary
         if self.board.should_promote(&piece, to_row) {
@@ -122,7 +126,7 @@ impl CheckersGame {
             for (row_diff, col_diff) in directions {
                 let next_row = (row as i32 + row_diff) as usize;
                 let next_col = (col as i32 + col_diff) as usize;
-                
+
                 if self.board.in_bounds(next_row, next_col) {
                     if self.is_valid_move(row, col, next_row, next_col, &piece) {
                         return true;
@@ -133,7 +137,14 @@ impl CheckersGame {
         false
     }
 
-    fn is_valid_move(&self, from_row: usize, from_col: usize, to_row: usize, to_col: usize, piece: &Piece) -> bool {
+    fn is_valid_move(
+        &self,
+        from_row: usize,
+        from_col: usize,
+        to_row: usize,
+        to_col: usize,
+        piece: &Piece,
+    ) -> bool {
         // Basic checks
         if !self.board.in_bounds(to_row, to_col) {
             return false;
@@ -153,10 +164,11 @@ impl CheckersGame {
 
         // Regular move
         if row_diff.abs() == 1 {
-            return piece.is_king || match piece.color {
-                Color::White => row_diff < 0,
-                Color::Black => row_diff > 0,
-            };
+            return piece.is_king
+                || match piece.color {
+                    Color::White => row_diff < 0,
+                    Color::Black => row_diff > 0,
+                };
         }
 
         // Capture move
@@ -170,10 +182,11 @@ impl CheckersGame {
                     return false;
                 }
 
-                return piece.is_king || match piece.color {
-                    Color::White => row_diff < 0,
-                    Color::Black => row_diff > 0,
-                };
+                return piece.is_king
+                    || match piece.color {
+                        Color::White => row_diff < 0,
+                        Color::Black => row_diff > 0,
+                    };
             }
         }
 
@@ -226,7 +239,7 @@ impl CheckersGame {
                         for (row_diff, col_diff) in directions {
                             let to_row = (row as i32 + row_diff) as usize;
                             let to_col = (col as i32 + col_diff) as usize;
-                            
+
                             if self.board.in_bounds(to_row, to_col) {
                                 if self.is_valid_move(row, col, to_row, to_col, &piece) {
                                     return true;
@@ -269,7 +282,7 @@ impl CheckersGame {
                                 Ok(val) => val,
                                 Err(_) => continue,
                             };
-                            
+
                             if self.board.in_bounds(to_row, to_col) {
                                 if self.is_valid_move(row, col, to_row, to_col, &piece) {
                                     return false;
@@ -282,4 +295,4 @@ impl CheckersGame {
         }
         true
     }
-} 
+}

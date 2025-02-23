@@ -15,9 +15,7 @@ pub struct UI {
 
 impl UI {
     pub fn new() -> Self {
-        Self {
-            cursor_pos: (0, 0),
-        }
+        Self { cursor_pos: (0, 0) }
     }
 
     pub fn set_cursor(&mut self, row: usize, col: usize) {
@@ -37,7 +35,7 @@ impl UI {
 
         // Print column headers with blue color
         stdout.queue(SetForegroundColor(Color::Blue))?;
-        stdout.write_all(b"   ")?;  // Extra space for alignment
+        stdout.write_all(b"   ")?; // Extra space for alignment
         for col in 0..game.board.size {
             write!(stdout, " {} ", (b'A' + col as u8) as char)?;
         }
@@ -49,16 +47,19 @@ impl UI {
             stdout.queue(SetForegroundColor(Color::Blue))?;
             write!(stdout, "{:2} ", row + 1)?;
             stdout.queue(ResetColor)?;
-            
+
             for col in 0..game.board.size {
                 let is_cursor_here = (row, col) == self.cursor_pos;
                 let is_selected = game.selected_piece == Some((row, col));
 
                 let (piece_char, piece_color) = match game.board.get_piece(row, col) {
-                    Some(piece) => (piece.display(), match piece.color {
-                        PieceColor::White => Color::White,
-                        PieceColor::Black => Color::Red,
-                    }),
+                    Some(piece) => (
+                        piece.display(),
+                        match piece.color {
+                            PieceColor::White => Color::White,
+                            PieceColor::Black => Color::Red,
+                        },
+                    ),
                     None => ('.', Color::DarkGrey),
                 };
 
@@ -86,10 +87,14 @@ impl UI {
         stdout.queue(SetForegroundColor(player_color))?;
         writeln!(stdout, "{:?}", game.current_player)?;
         stdout.queue(ResetColor)?;
-        
+
         if let Some(selected) = game.selected_piece {
             stdout.queue(SetForegroundColor(Color::Green))?;
-            writeln!(stdout, "Selected piece at: {}", Self::format_position(selected))?;
+            writeln!(
+                stdout,
+                "Selected piece at: {}",
+                Self::format_position(selected)
+            )?;
             stdout.queue(ResetColor)?;
         }
 
@@ -112,4 +117,4 @@ impl UI {
     fn format_position(pos: (usize, usize)) -> String {
         format!("{}{}", (b'A' + pos.1 as u8) as char, pos.0 + 1)
     }
-} 
+}
