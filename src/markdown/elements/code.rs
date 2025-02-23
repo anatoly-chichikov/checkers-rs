@@ -31,9 +31,9 @@ impl Element for CodeBlock {
             writer.write_colored(&self.content, Color::Green)?;
         } else {
             writer.write_plain("\n")?;
-            writer.write_colored(&self.content.trim(), Color::Yellow)?;
+            writer.write_colored(self.content.trim(), Color::Yellow)?;
             writer.write_plain("\n")?;
         }
         Ok(())
     }
-} 
+}
