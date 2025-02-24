@@ -1,4 +1,4 @@
-use checkers_rs::markdown::parser::MarkdownRenderer;
+use checkers_rs::utils::markdown::parser::MarkdownRenderer;
 use crossterm::style::{Color, ResetColor, SetForegroundColor};
 
 fn strip_color_codes(s: &str) -> String {
