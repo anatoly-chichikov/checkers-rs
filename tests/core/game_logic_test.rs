@@ -1,6 +1,6 @@
-use checkers_rs::board::Board;
-use checkers_rs::game_logic;
-use checkers_rs::piece::{Color, Piece};
+use checkers_rs::core::board::Board;
+use checkers_rs::core::game_logic;
+use checkers_rs::core::piece::{Color, Piece};
 
 #[test]
 fn test_should_promote() {

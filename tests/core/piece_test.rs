@@ -1,4 +1,4 @@
-use checkers_rs::piece::{Color, Piece};
+use checkers_rs::core::piece::{Color, Piece};
 
 #[test]
 fn test_new_piece() {
