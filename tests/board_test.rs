@@ -1,4 +1,5 @@
 use checkers_rs::board::Board;
+use checkers_rs::game_logic;
 use checkers_rs::piece::{Color, Piece};
 
 #[test]
@@ -84,12 +85,12 @@ fn test_should_promote() {
     let black_piece = Piece::new(Color::Black);
 
     // White pieces should promote at row 0
-    assert!(board.should_promote(&white_piece, 0));
-    assert!(!board.should_promote(&white_piece, 1));
+    assert!(game_logic::should_promote(&white_piece, 0, board.size));
+    assert!(!game_logic::should_promote(&white_piece, 1, board.size));
 
     // Black pieces should promote at row 7
-    assert!(board.should_promote(&black_piece, 7));
-    assert!(!board.should_promote(&black_piece, 6));
+    assert!(game_logic::should_promote(&black_piece, 7, board.size));
+    assert!(!game_logic::should_promote(&black_piece, 6, board.size));
 }
 
 #[test]

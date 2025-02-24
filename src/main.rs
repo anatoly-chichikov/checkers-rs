@@ -1,6 +1,7 @@
 mod ai;
 mod board;
 mod game;
+mod game_logic;
 mod input;
 mod markdown;
 mod messages;

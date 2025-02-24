@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod board;
 pub mod game;
+pub mod game_logic;
 pub mod input;
 pub mod markdown;
 pub mod messages;

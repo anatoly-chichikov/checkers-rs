@@ -81,11 +81,4 @@ impl Board {
         self.set_piece(from.0, from.1, None);
         true
     }
-
-    pub fn should_promote(&self, piece: &Piece, row: usize) -> bool {
-        match piece.color {
-            Color::White => row == 0,
-            Color::Black => row == self.size - 1,
-        }
-    }
 }
