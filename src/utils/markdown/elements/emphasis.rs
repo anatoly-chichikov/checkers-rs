@@ -1,4 +1,4 @@
-use crossterm::style::{Attribute, Color};
+use crossterm::style::Color;
 use std::io;
 
 use super::Element;
