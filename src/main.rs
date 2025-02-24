@@ -1,12 +1,7 @@
 mod ai;
-mod board;
-mod game;
-mod game_logic;
-mod input;
-mod markdown;
-mod messages;
-mod piece;
-mod ui;
+mod core;
+mod interface;
+mod utils;
 
 use crossterm::{
     cursor::MoveTo,
@@ -17,9 +12,12 @@ use std::io::{self, stdout, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::input::{CursorDirection, GameInput};
-use crate::markdown::parser::MarkdownRenderer;
-use crate::ui::UI;
+use crate::core::game;
+use crate::interface::input;
+use crate::interface::input::{CursorDirection, GameInput};
+use crate::interface::messages;
+use crate::interface::ui::UI;
+use crate::utils::markdown::parser::MarkdownRenderer;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -36,9 +34,9 @@ fn format_model_output(message: &str) -> std::io::Result<String> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Try to get AI story about checkers if API key is available
-    let welcome_message = match ai::explain_rules().await {
+    let welcome_message = match crate::ai::ai::explain_rules().await {
         Ok(rules) => format!("# Welcome to Checkers!\n\n{}", rules),
-        Err(ai::AIError::NoApiKey) => String::from(messages::WELCOME_MESSAGE_NO_API),
+        Err(crate::ai::ai::AIError::NoApiKey) => String::from(messages::WELCOME_MESSAGE_NO_API),
         Err(e) => {
             eprintln!("Failed to get checkers story from AI: {}", e);
             String::from(messages::WELCOME_MESSAGE_ERROR)

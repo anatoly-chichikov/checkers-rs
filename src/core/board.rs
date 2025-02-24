@@ -1,4 +1,4 @@
-use crate::piece::{Color, Piece};
+use crate::core::piece::{Color, Piece};
 
 #[derive(Clone, Debug)]
 pub struct Board {

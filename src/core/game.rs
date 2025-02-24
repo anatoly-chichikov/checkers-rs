@@ -1,6 +1,6 @@
-use crate::board::Board;
-use crate::piece::Color;
-use crate::game_logic;
+use crate::core::board::Board;
+use crate::core::game_logic;
+use crate::core::piece::Color;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

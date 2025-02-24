@@ -1,8 +1,8 @@
-use crossterm::style::Color;
+use crossterm::style::{Attribute, Color};
 use std::io;
 
 use super::Element;
-use crate::markdown::style::StyleWriter;
+use crate::utils::markdown::style::StyleWriter;
 
 pub struct Header {
     level: u8,
