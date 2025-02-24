@@ -1,5 +1,5 @@
 use crossterm::style::Color;
-use std::io::{self, Write};
+use std::io::{self};
 
 use super::Element;
 use crate::utils::markdown::style::StyleWriter;
