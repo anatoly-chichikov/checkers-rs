@@ -15,7 +15,7 @@ use std::{
 };
 use thiserror::Error;
 
-use super::messages;
+use crate::interface::messages;
 
 struct LoadingAnimation {
     frames: Vec<&'static str>,

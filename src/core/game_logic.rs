@@ -1,5 +1,5 @@
-use crate::board::Board;
-use crate::piece::{Color, Piece};
+use crate::core::board::Board;
+use crate::core::piece::{Color, Piece};
 
 /// Checks if a piece can be promoted to king based on its position
 pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
@@ -204,4 +204,4 @@ pub fn check_winner(board: &Board) -> Option<Color> {
         (false, true) => Some(Color::Black),
         _ => None,
     }
-} 
+}

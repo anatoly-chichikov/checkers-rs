@@ -6,8 +6,8 @@ use crossterm::{
 };
 use std::io::{self, stdout, Write};
 
-use crate::game::CheckersGame;
-use crate::piece::Color as PieceColor;
+use crate::core::game::CheckersGame;
+use crate::core::piece::Color as PieceColor;
 
 pub struct UI {
     cursor_pos: (usize, usize),

@@ -1,6 +1,6 @@
 pub const LOADING_MESSAGE: &str = "Waiting for the magic to happen...";
 
-pub const STORY_PROMPT: &str = include_str!("prompts/story.txt");
+pub const STORY_PROMPT: &str = include_str!("../utils/prompts/story.txt");
 
 pub const WELCOME_MESSAGE_NO_API: &str = "# Welcome to Checkers!\n\n\
 This is a terminal-based Checkers game. Use arrow keys to navigate, Enter to select and move pieces.\n\n\

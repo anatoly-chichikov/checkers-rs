@@ -1,8 +1,8 @@
 use crossterm::style::Color;
-use std::io;
+use std::io::{self, Write};
 
 use super::Element;
-use crate::markdown::style::StyleWriter;
+use crate::utils::markdown::style::StyleWriter;
 
 pub struct CodeBlock {
     content: String,
