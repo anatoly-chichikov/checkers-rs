@@ -27,25 +27,6 @@ A simple terminal-based Checkers game with arrow key navigation.
 - **Space or Enter:** Select/deselect pieces and make moves
 - **Esc or Q:** Exit the game
 
-**Project Structure:**
-```
-src/
-  ├── core/          # Core game components
-  │   ├── board.rs   # Game board representation
-  │   ├── game.rs    # Game state and rules
-  │   ├── game_logic.rs # Game logic functions
-  │   └── piece.rs   # Piece representation
-  ├── interface/     # User interaction
-  │   ├── input.rs   # Input handling
-  │   ├── messages.rs # Game messages
-  │   └── ui.rs      # User interface rendering
-  ├── ai/            # AI components
-  │   └── ai.rs      # AI opponent logic
-  └── utils/         # Utilities
-      ├── markdown/  # Markdown parsing for text display
-      └── prompts/   # Game text and prompts
-```
-
 **Testing:**
 Run tests with:
 ```bash
