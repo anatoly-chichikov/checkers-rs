@@ -9,6 +9,147 @@ pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
     }
 }
 
+// Helper function to find all capture sequences for a piece
+fn find_capture_moves_recursive(
+    board: &Board,
+    current_row: usize,
+    current_col: usize,
+    piece: &Piece, // Pass the original piece to maintain its properties (king status, color)
+    current_path: Vec<(usize, usize)>, // Stores the sequence of positions in a multi-jump
+    all_capture_paths: &mut Vec<Vec<(usize, usize)>>, // Stores all found capture paths (sequences of positions)
+) {
+    let mut found_next_capture = false;
+
+    let directions = if piece.is_king {
+        vec![(-2, -2), (-2, 2), (2, -2), (2, 2)]
+    } else {
+        match piece.color {
+            Color::White => vec![(-2, -2), (-2, 2)],
+            Color::Black => vec![(2, -2), (2, 2)],
+        }
+    };
+
+    for (row_offset, col_offset) in directions {
+        let to_row_i32 = current_row as i32 + row_offset;
+        let to_col_i32 = current_col as i32 + col_offset;
+
+        // Bounds check for target square
+        if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
+           to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
+            continue;
+        }
+        let to_row = to_row_i32 as usize;
+        let to_col = to_col_i32 as usize;
+
+        // Calculate midpoint for capture
+        let mid_row = ((current_row as i32 + to_row_i32) / 2) as usize;
+        let mid_col = ((current_col as i32 + to_col_i32) / 2) as usize;
+
+        // Check if the move is a valid capture
+        if board.get_piece(to_row, to_col).is_none() { // Target square must be empty
+            if let Some(mid_piece) = board.get_piece(mid_row, mid_col) {
+                if mid_piece.color != piece.color { // Must capture an opponent's piece
+                    // Check if this jump is valid based on piece type and direction
+                    let is_capture_valid_for_piece = if piece.is_king {
+                        true // Kings can capture in any diagonal direction
+                    } else {
+                        // Regular pieces have direction-specific captures
+                        match piece.color {
+                            Color::White => to_row_i32 < current_row as i32, // White captures "up"
+                            Color::Black => to_row_i32 > current_row as i32, // Black captures "down"
+                        }
+                    };
+
+                    if is_capture_valid_for_piece {
+                        let mut new_board = board.clone(); // Create a new board state for this path
+                        new_board.set_piece(mid_row, mid_col, None); // Remove the captured piece
+                        // Temporarily move the piece on the new board to explore further jumps
+                        // The original piece object (with its king status) is carried through.
+                        // We don't actually place it on new_board for this check, as we only need its properties.
+
+                        let mut next_path = current_path.clone();
+                        next_path.push((to_row, to_col));
+                        found_next_capture = true;
+
+                        // Recursively check for more captures from the new position
+                        find_capture_moves_recursive(&new_board, to_row, to_col, piece, next_path, all_capture_paths);
+                    }
+                }
+            }
+        }
+    }
+
+    // If no further captures were found from this position, this path ends.
+    // If the current_path is not empty (i.e., it's a result of at least one jump), add it.
+    if !found_next_capture && !current_path.is_empty() {
+        all_capture_paths.push(current_path);
+    }
+}
+
+
+pub fn get_all_possible_moves(
+    board: &Board,
+    piece_row: usize,
+    piece_col: usize,
+) -> Vec<(usize, usize)> {
+    let piece = match board.get_piece(piece_row, piece_col) {
+        Some(p) => p.clone(), // Clone the piece to avoid ownership issues
+        None => return vec![], // No piece at the given position
+    };
+
+    let mut all_capture_final_positions: Vec<(usize, usize)> = Vec::new();
+    let mut capture_paths: Vec<Vec<(usize, usize)>> = Vec::new();
+
+    // Start recursive search for captures.
+    // The initial "path" for the recursion is just the starting point, but find_capture_moves_recursive
+    // expects paths of actual jumps. So, we initiate it with an empty path, and it will add
+    // sequences of jumps.
+    find_capture_moves_recursive(board, piece_row, piece_col, &piece, Vec::new(), &mut capture_paths);
+
+    if !capture_paths.is_empty() {
+        // If there are capture paths, return the final landing spots of these paths.
+        for path in capture_paths {
+            if let Some(last_pos) = path.last() {
+                if !all_capture_final_positions.contains(last_pos) {
+                     all_capture_final_positions.push(*last_pos);
+                }
+            }
+        }
+        return all_capture_final_positions;
+    }
+
+    // If no captures are available, find regular moves
+    let mut regular_moves: Vec<(usize, usize)> = Vec::new();
+    let move_offsets = if piece.is_king {
+        // Kings can move in all four diagonal directions
+        vec![(-1, -1), (-1, 1), (1, -1), (1, 1)]
+    } else {
+        // Non-king pieces have specific move directions based on color
+        match piece.color {
+            Color::White => vec![(-1, -1), (-1, 1)], // White moves "up"
+            Color::Black => vec![(1, -1), (1, 1)],   // Black moves "down"
+        }
+    };
+
+    for (row_offset, col_offset) in move_offsets {
+        let to_row_i32 = piece_row as i32 + row_offset;
+        let to_col_i32 = piece_col as i32 + col_offset;
+
+        if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
+           to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
+            continue; // Target square is out of bounds
+        }
+        let to_row = to_row_i32 as usize;
+        let to_col = to_col_i32 as usize;
+
+        if is_valid_move(board, piece_row, piece_col, to_row, to_col, &piece) {
+            regular_moves.push((to_row, to_col));
+        }
+    }
+
+    regular_moves
+}
+
 // Checks if a move is valid according to checkers rules
 pub fn is_valid_move(
     board: &Board,

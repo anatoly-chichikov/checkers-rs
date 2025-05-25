@@ -57,6 +57,12 @@ impl UI {
             for col in 0..game.board.size {
                 let is_cursor_here = (row, col) == self.cursor_pos;
                 let is_selected = game.selected_piece == Some((row, col));
+                let mut is_possible_move = false;
+                if let Some(possible_moves_vec) = &game.possible_moves {
+                    if possible_moves_vec.contains(&(row, col)) {
+                        is_possible_move = true;
+                    }
+                }
 
                 let (piece_char, piece_color) = match game.board.get_piece(row, col) {
                     Some(piece) => (
@@ -75,6 +81,9 @@ impl UI {
                 } else if is_selected {
                     stdout.queue(SetForegroundColor(Color::Green))?;
                     write!(stdout, "({0})", piece_char)?;
+                } else if is_possible_move {
+                    stdout.queue(SetForegroundColor(Color::Cyan))?;
+                    write!(stdout, "*{0}*", piece_char)?;
                 } else {
                     stdout.queue(SetForegroundColor(piece_color))?;
                     write!(stdout, " {0} ", piece_char)?;
