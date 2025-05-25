@@ -30,9 +30,8 @@ pub struct GeminiResponse {
     pub candidates: Vec<Candidate>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Candidate {
     pub content: Content,
-    #[serde(rename = "finishReason")]
-    pub finish_reason: String,
+    // pub finish_reason: String, // This line is removed
 } 
