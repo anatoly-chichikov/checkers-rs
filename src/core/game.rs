@@ -1,5 +1,5 @@
 use crate::core::board::Board;
-use crate::core::game_logic;
+use crate::core::game_logic::{self, can_piece_capture};
 use crate::core::piece::Color;
 use thiserror::Error;
 
@@ -55,6 +55,12 @@ impl CheckersGame {
 
         match self.board.get_piece(row, col) {
             Some(piece) if piece.color == self.current_player => {
+                // Forced capture logic
+                if self.has_captures_available() {
+                    if !can_piece_capture(&self.board, row, col) {
+                        return Err(GameError::ForcedCaptureAvailable);
+                    }
+                }
                 self.selected_piece = Some((row, col));
                 Ok(())
             }

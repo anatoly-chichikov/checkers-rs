@@ -418,3 +418,226 @@ fn test_toggle_piece_selection_with_no_moves() {
     assert!(game.select_piece(7, 0).is_ok());
     assert_eq!(game.selected_piece, None);
 }
+
+// --- Tests for Forced Jump Logic ---
+
+#[test]
+fn test_select_non_capturing_fails_when_capture_exists() {
+    let mut game = CheckersGame::new();
+    // Clear board
+    for r in 0..game.board.size {
+        for c in 0..game.board.size {
+            game.board.set_piece(r, c, None);
+        }
+    }
+
+    // Piece A can capture, Piece B cannot
+    let white_a = Piece::new(Color::White);
+    let white_b = Piece::new(Color::White);
+    let black_x = Piece::new(Color::Black);
+
+    game.board.set_piece(5, 0, Some(white_a)); // Piece A
+    game.board.set_piece(4, 1, Some(black_x)); // Opponent for A
+                                               // Landing for A is (3,2)
+
+    game.board.set_piece(5, 4, Some(white_b)); // Piece B, can only move to (4,3) or (4,5)
+
+    // Attempt to select Piece B (non-capturing)
+    assert!(matches!(
+        game.select_piece(5, 4),
+        Err(GameError::ForcedCaptureAvailable)
+    ));
+}
+
+#[test]
+fn test_select_capturing_succeeds_when_capture_exists() {
+    let mut game = CheckersGame::new();
+    for r in 0..game.board.size {
+        for c in 0..game.board.size {
+            game.board.set_piece(r, c, None);
+        }
+    }
+
+    let white_a = Piece::new(Color::White);
+    let white_b = Piece::new(Color::White);
+    let black_x = Piece::new(Color::Black);
+
+    game.board.set_piece(5, 0, Some(white_a)); 
+    game.board.set_piece(4, 1, Some(black_x)); 
+    game.board.set_piece(5, 4, Some(white_b));
+
+    // Attempt to select Piece A (capturing)
+    assert!(game.select_piece(5, 0).is_ok());
+    assert_eq!(game.selected_piece, Some((5,0)));
+}
+
+#[test]
+fn test_select_any_piece_succeeds_when_no_capture_exists() {
+    let mut game = CheckersGame::new();
+    for r in 0..game.board.size {
+        for c in 0..game.board.size {
+            game.board.set_piece(r, c, None);
+        }
+    }
+    let white_a = Piece::new(Color::White);
+    let white_b = Piece::new(Color::White);
+    game.board.set_piece(5, 0, Some(white_a));
+    game.board.set_piece(5, 2, Some(white_b));
+    // No black pieces, so no captures available
+
+    assert!(game.select_piece(5, 0).is_ok());
+    assert_eq!(game.selected_piece, Some((5,0)));
+    // Deselect to select another
+    assert!(game.select_piece(5,0).is_ok()); 
+    assert_eq!(game.selected_piece, None);
+
+    assert!(game.select_piece(5, 2).is_ok());
+    assert_eq!(game.selected_piece, Some((5,2)));
+}
+
+#[test]
+fn test_make_non_capture_move_fails_when_capture_exists_detailed() {
+    // This test re-confirms/details the behavior already in `test_forced_capture`
+    let mut game = CheckersGame::new();
+    for r in 0..game.board.size {
+        for c in 0..game.board.size {
+            game.board.set_piece(r, c, None);
+        }
+    }
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+
+    game.board.set_piece(5, 2, Some(white_piece)); // Can capture to (3,4) or (3,0)
+    game.board.set_piece(4, 1, Some(black_piece)); // Opponent 1
+    game.board.set_piece(4, 3, Some(black_piece)); // Opponent 2
+
+    // Also, white piece at (6,5) that can only make a simple move to (5,4) or (5,6)
+    // This setup is to ensure `has_captures_available` is true due to (5,2)
+    game.board.set_piece(6,5, Some(Piece::new(Color::White)));
+
+
+    // Select the piece that has a capture
+    assert!(game.select_piece(5, 2).is_ok());
+
+    // Try to make a non-capturing move (if it were possible for this piece, e.g. if it was a king)
+    // For a regular piece, any 1-step move is non-capturing.
+    // Let's imagine a scenario where (5,2) also had a non-capture move to (4,2) (not possible in checkers)
+    // The current `is_valid_move` for (5,2) to (4,1) or (4,3) would be false as they are occupied.
+    // The only valid moves are captures to (3,0) or (3,4).
+    // The spirit of this test is: if a piece *could* make a non-capture move, but *also* has a capture,
+    // it must capture. The existing `make_move` already checks this.
+    // If we try to move to an empty adjacent square (e.g. (6,1) if it were a king), it should fail.
+    // Let's test with a king to make it clearer.
+    let mut white_king = Piece::new(Color::White);
+    white_king.promote_to_king();
+    game.board.set_piece(5,2, Some(white_king)); // Now it's a king
+
+    // King at (5,2) can capture black at (4,1) to (3,0) OR capture black at (4,3) to (3,4)
+    // King at (5,2) could also move to (6,1), (6,3) if they were empty (non-capture)
+    game.board.set_piece(6,1, None); // Ensure (6,1) is empty for a non-capture move
+
+    assert!(game.select_piece(5, 2).is_ok());
+    assert!(matches!(
+        game.make_move(6, 1), // Attempt non-capturing move
+        Err(GameError::ForcedCaptureAvailable)
+    ));
+
+    // Make one of the captures
+    assert!(game.make_move(3,0).is_ok()); // Capture to (3,0) via (4,1)
+    assert!(game.board.get_piece(4,1).is_none());
+}
+
+
+#[test]
+fn test_must_make_single_available_jump_detailed() {
+    let mut game = CheckersGame::new();
+    for r in 0..game.board.size { for c in 0..game.board.size { game.board.set_piece(r, c, None); } }
+
+    let white_a = Piece::new(Color::White);
+    let black_x = Piece::new(Color::Black);
+    game.board.set_piece(5, 0, Some(white_a)); // Piece A
+    game.board.set_piece(4, 1, Some(black_x)); // Opponent X
+                                               // Landing for A is (3,2)
+    // Ensure no other white pieces or moves complicate the scenario
+    // e.g. block other moves for white_a if it were a king.
+
+    assert!(game.select_piece(5, 0).is_ok());
+    assert!(game.make_move(3, 2).is_ok());
+    assert!(game.board.get_piece(4, 1).is_none(), "Opponent X should be removed");
+    assert!(game.board.get_piece(3, 2).is_some(), "Piece A should be at (3,2)");
+    assert_eq!(game.board.get_piece(3,2).unwrap().color, Color::White);
+    // Check for promotion if applicable (e.g. if landing row was 0 for white)
+    // In this case, (3,2) is not a promotion row.
+}
+
+#[test]
+fn test_can_choose_between_multiple_capturing_pieces() {
+    let mut game = CheckersGame::new();
+
+    let setup_board = |game: &mut CheckersGame| {
+        for r in 0..game.board.size { for c in 0..game.board.size { game.board.set_piece(r, c, None); } }
+        let white_a = Piece::new(Color::White);
+        let white_b = Piece::new(Color::White);
+        let black_x = Piece::new(Color::Black);
+        let black_y = Piece::new(Color::Black);
+
+        game.board.set_piece(5, 0, Some(white_a)); // Piece A
+        game.board.set_piece(4, 1, Some(black_x)); // Opponent X for A (landing (3,2))
+
+        game.board.set_piece(5, 4, Some(white_b)); // Piece B
+        game.board.set_piece(4, 5, Some(black_y)); // Opponent Y for B (landing (3,6))
+    };
+
+    // Scenario 1: Choose Piece A
+    setup_board(&mut game);
+    assert_eq!(game.current_player, Color::White);
+    assert!(game.select_piece(5, 0).is_ok(), "Should be able to select Piece A");
+    assert!(game.make_move(3, 2).is_ok(), "Piece A should make its capture");
+    assert!(game.board.get_piece(4, 1).is_none(), "Opponent X should be removed");
+    assert!(game.board.get_piece(3, 2).is_some(), "Piece A should be at (3,2)");
+    assert_eq!(game.current_player, Color::Black, "Player should switch after capture sequence ends");
+
+
+    // Scenario 2: Choose Piece B
+    setup_board(&mut game);
+    game.current_player = Color::White; // Reset player
+    assert!(game.select_piece(5, 4).is_ok(), "Should be able to select Piece B");
+    assert!(game.make_move(3, 6).is_ok(), "Piece B should make its capture");
+    assert!(game.board.get_piece(4, 5).is_none(), "Opponent Y should be removed");
+    assert!(game.board.get_piece(3, 6).is_some(), "Piece B should be at (3,6)");
+    assert_eq!(game.current_player, Color::Black, "Player should switch after capture sequence ends");
+}
+
+
+#[test]
+fn test_must_continue_multi_jump_detailed() {
+    let mut game = CheckersGame::new();
+    for r in 0..game.board.size { for c in 0..game.board.size { game.board.set_piece(r, c, None); } }
+
+    let white_a = Piece::new(Color::White);
+    let black_x = Piece::new(Color::Black);
+    let black_z = Piece::new(Color::Black);
+
+    game.board.set_piece(6, 1, Some(white_a)); // Piece A
+    game.board.set_piece(5, 2, Some(black_x)); // Opponent X, landing for A is (4,3)
+    game.board.set_piece(3, 4, Some(black_z)); // Opponent Z, for A to jump from (4,3) to (2,5)
+
+    // Select A and make the first jump
+    assert!(game.select_piece(6, 1).is_ok());
+    assert!(game.make_move(4, 3).is_ok(), "First jump should succeed");
+    assert!(game.board.get_piece(5, 2).is_none(), "Opponent X removed");
+    assert!(game.board.get_piece(4, 3).is_some(), "Piece A at (4,3)");
+    
+    // Verify game state for multi-jump
+    assert_eq!(game.selected_piece, Some((4, 3)), "Piece A should remain selected at new position");
+    assert_eq!(game.current_player, Color::White, "Player should not change during multi-jump");
+
+    // Make the second jump
+    assert!(game.make_move(2, 5).is_ok(), "Second jump should succeed");
+    assert!(game.board.get_piece(3, 4).is_none(), "Opponent Z removed");
+    assert!(game.board.get_piece(2, 5).is_some(), "Piece A at (2,5)");
+    
+    // Verify game state after multi-jump sequence ends
+    assert_eq!(game.selected_piece, None, "Piece should be deselected after multi-jump sequence");
+    assert_eq!(game.current_player, Color::Black, "Player should switch after multi-jump sequence");
+}
