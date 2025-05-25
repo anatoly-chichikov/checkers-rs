@@ -504,45 +504,35 @@ fn test_make_non_capture_move_fails_when_capture_exists_detailed() {
             game.board.set_piece(r, c, None);
         }
     }
-    let white_piece = Piece::new(Color::White);
     let black_piece = Piece::new(Color::Black);
 
-    game.board.set_piece(5, 2, Some(white_piece)); // Can capture to (3,4) or (3,0)
+    // Place black pieces for the king to capture
     game.board.set_piece(4, 1, Some(black_piece)); // Opponent 1
     game.board.set_piece(4, 3, Some(black_piece)); // Opponent 2
 
-    // Also, white piece at (6,5) that can only make a simple move to (5,4) or (5,6)
-    // This setup is to ensure `has_captures_available` is true due to (5,2)
+    // Place other white piece (not involved in this specific test but part of original setup)
     game.board.set_piece(6,5, Some(Piece::new(Color::White)));
 
-
-    // Select the piece that has a capture
-    assert!(game.select_piece(5, 2).is_ok());
-
-    // Try to make a non-capturing move (if it were possible for this piece, e.g. if it was a king)
-    // For a regular piece, any 1-step move is non-capturing.
-    // Let's imagine a scenario where (5,2) also had a non-capture move to (4,2) (not possible in checkers)
-    // The current `is_valid_move` for (5,2) to (4,1) or (4,3) would be false as they are occupied.
-    // The only valid moves are captures to (3,0) or (3,4).
-    // The spirit of this test is: if a piece *could* make a non-capture move, but *also* has a capture,
-    // it must capture. The existing `make_move` already checks this.
-    // If we try to move to an empty adjacent square (e.g. (6,1) if it were a king), it should fail.
-    // Let's test with a king to make it clearer.
+    // Define and place the white KING piece
     let mut white_king = Piece::new(Color::White);
     white_king.promote_to_king();
-    game.board.set_piece(5,2, Some(white_king)); // Now it's a king
+    game.board.set_piece(5,2, Some(white_king));
 
-    // King at (5,2) can capture black at (4,1) to (3,0) OR capture black at (4,3) to (3,4)
-    // King at (5,2) could also move to (6,1), (6,3) if they were empty (non-capture)
-    game.board.set_piece(6,1, None); // Ensure (6,1) is empty for a non-capture move
+    // Ensure the non-capture target square (6,1) is empty
+    game.board.set_piece(6,1, None);
 
+    // Select the KING at (5,2)
     assert!(game.select_piece(5, 2).is_ok());
+
+    // Assert that attempting the non-capture move to (6,1) results in ForcedCaptureAvailable
     assert!(matches!(
         game.make_move(6, 1), // Attempt non-capturing move
         Err(GameError::ForcedCaptureAvailable)
     ));
 
-    // Make one of the captures
+    // Make one of the captures (optional, but good to keep to ensure captures are still possible)
+    // Note: After the failed make_move above, the king is still selected.
+    // If the previous make_move was Err, current_player would not change, selected_piece would not change.
     assert!(game.make_move(3,0).is_ok()); // Capture to (3,0) via (4,1)
     assert!(game.board.get_piece(4,1).is_none());
 }
