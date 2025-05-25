@@ -1,5 +1,5 @@
 use crate::core::board::Board;
-use crate::core::game_logic::{self, can_piece_capture};
+use crate::core::game_logic::{self, can_piece_capture, get_all_possible_moves};
 use crate::core::piece::Color;
 use thiserror::Error;
 
@@ -22,6 +22,7 @@ pub struct CheckersGame {
     pub current_player: Color,
     pub is_game_over: bool,
     pub selected_piece: Option<(usize, usize)>,
+    pub possible_moves: Option<Vec<(usize, usize)>>,
 }
 
 impl Default for CheckersGame {
@@ -39,6 +40,7 @@ impl CheckersGame {
             current_player: Color::White,
             is_game_over: false,
             selected_piece: None,
+            possible_moves: None,
         }
     }
 
@@ -50,6 +52,7 @@ impl CheckersGame {
         // If selecting the same piece that's already selected, deselect it
         if self.selected_piece == Some((row, col)) {
             self.selected_piece = None;
+            self.possible_moves = None;
             return Ok(());
         }
 
@@ -62,6 +65,7 @@ impl CheckersGame {
                     }
                 }
                 self.selected_piece = Some((row, col));
+                self.possible_moves = Some(get_all_possible_moves(&self.board, row, col));
                 Ok(())
             }
             Some(_) => Err(GameError::WrongPieceColor),
@@ -116,11 +120,15 @@ impl CheckersGame {
 
         // After a capture, check if there are more captures available for the same piece
         if row_diff == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col) {
+            // If more captures are available, update selected piece and its possible moves
             self.selected_piece = Some((to_row, to_col));
+            self.possible_moves = Some(get_all_possible_moves(&self.board, to_row, to_col));
+            // Note: Player does not switch here
             return Ok(());
         }
 
         self.selected_piece = None;
+        self.possible_moves = None;
         self.switch_player();
         Ok(())
     }

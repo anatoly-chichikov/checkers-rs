@@ -375,3 +375,532 @@ fn test_can_piece_capture_negative_piece_no_moves() {
     board2.set_piece(6,1, Some(Piece::new(Color::White)));
     assert!(!game_logic::can_piece_capture(&board2,7,0));
 }
+
+// New module for get_all_possible_moves tests
+#[cfg(test)]
+mod get_all_possible_moves_tests {
+    use checkers_rs::core::board::Board;
+    use checkers_rs::core::game_logic::get_all_possible_moves;
+    use checkers_rs::core::piece::{Color, Piece};
+    use std::collections::HashSet;
+
+    // Helper function to compare two vectors of moves ignoring order
+    fn assert_moves_equal(actual: &[(usize, usize)], expected: &[(usize, usize)]) {
+        let actual_set: HashSet<_> = actual.iter().cloned().collect();
+        let expected_set: HashSet<_> = expected.iter().cloned().collect();
+        assert_eq!(actual_set, expected_set, "Actual moves: {:?}, Expected moves: {:?}", actual, expected);
+    }
+
+    // 1. Regular Piece - No Captures
+    #[test]
+    fn test_regular_white_no_captures_forward() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        board.set_piece(5, 2, Some(white_piece)); // White piece at (5,2)
+
+        let moves = get_all_possible_moves(&board, 5, 2);
+        let expected_moves = vec![(4, 1), (4, 3)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_regular_black_no_captures_forward() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        board.set_piece(2, 2, Some(black_piece)); // Black piece at (2,2)
+
+        let moves = get_all_possible_moves(&board, 2, 2);
+        let expected_moves = vec![(3, 1), (3, 3)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_regular_white_edge_no_captures() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        board.set_piece(5, 0, Some(white_piece)); // White piece at (5,0) edge
+
+        let moves = get_all_possible_moves(&board, 5, 0);
+        let expected_moves = vec![(4, 1)];
+        assert_moves_equal(&moves, &expected_moves);
+
+        board.set_piece(5,0, None);
+        board.set_piece(5, 7, Some(white_piece)); // White piece at (5,7) other edge
+        let moves_edge7 = get_all_possible_moves(&board, 5, 7);
+        let expected_moves_edge7 = vec![(4, 6)];
+        assert_moves_equal(&moves_edge7, &expected_moves_edge7);
+    }
+
+    #[test]
+    fn test_regular_black_edge_no_captures() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        board.set_piece(2, 0, Some(black_piece)); // Black piece at (2,0) edge
+
+        let moves = get_all_possible_moves(&board, 2, 0);
+        let expected_moves = vec![(3, 1)];
+        assert_moves_equal(&moves, &expected_moves);
+        
+        board.set_piece(2,0, None);
+        board.set_piece(2, 7, Some(black_piece)); // Black piece at (2,7) other edge
+        let moves_edge7 = get_all_possible_moves(&board, 2, 7);
+        let expected_moves_edge7 = vec![(3, 6)];
+        assert_moves_equal(&moves_edge7, &expected_moves_edge7);
+    }
+    
+    #[test]
+    fn test_regular_white_blocked_no_captures() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        let friendly_blocking_piece = Piece::new(Color::White); // Friendly piece
+        board.set_piece(5, 2, Some(white_piece));
+        board.set_piece(4, 1, Some(friendly_blocking_piece)); // Blocked by friendly
+        board.set_piece(4, 3, Some(friendly_blocking_piece)); // Blocked by friendly
+
+        let moves = get_all_possible_moves(&board, 5, 2);
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_regular_black_blocked_no_captures() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        let friendly_blocking_piece = Piece::new(Color::Black); // Friendly piece
+        board.set_piece(2, 2, Some(black_piece));
+        board.set_piece(3, 1, Some(friendly_blocking_piece)); // Blocked by friendly
+        board.set_piece(3, 3, Some(friendly_blocking_piece)); // Blocked by friendly
+
+        let moves = get_all_possible_moves(&board, 2, 2);
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    // 2. King - No Captures
+    #[test]
+    fn test_king_no_captures_all_directions() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        board.set_piece(3, 3, Some(white_king));
+
+        let moves = get_all_possible_moves(&board, 3, 3);
+        let expected_moves = vec![(2, 2), (2, 4), (4, 2), (4, 4)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_king_edge_no_captures() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        board.set_piece(0, 3, Some(white_king)); // King at top edge
+
+        let moves = get_all_possible_moves(&board, 0, 3);
+        let expected_moves = vec![(1, 2), (1, 4)];
+        assert_moves_equal(&moves, &expected_moves);
+
+        board.set_piece(0,3,None);
+        board.set_piece(3, 0, Some(white_king)); // King at left edge
+        let moves_left_edge = get_all_possible_moves(&board, 3, 0);
+        let expected_moves_left_edge = vec![(2,1), (4,1)];
+        assert_moves_equal(&moves_left_edge, &expected_moves_left_edge);
+    }
+
+    #[test]
+    fn test_king_blocked_no_captures() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        let friendly_blocking_piece = Piece::new(Color::White); // Friendly piece
+        board.set_piece(3, 3, Some(white_king));
+        board.set_piece(2, 2, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(2, 4, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(4, 2, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(4, 4, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+
+        let moves = get_all_possible_moves(&board, 3, 3);
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    // 3. Regular Piece - Single Captures
+    #[test]
+    fn test_regular_white_single_capture() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        let black_piece = Piece::new(Color::Black);
+        board.set_piece(5, 2, Some(white_piece));
+        board.set_piece(4, 3, Some(black_piece)); // Opponent to capture
+
+        let moves = get_all_possible_moves(&board, 5, 2);
+        let expected_moves = vec![(3, 4)]; // Only capture move
+        assert_moves_equal(&moves, &expected_moves);
+    }
+    
+    #[test]
+    fn test_regular_white_multiple_single_capture_options() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        let black_piece1 = Piece::new(Color::Black);
+        let black_piece2 = Piece::new(Color::Black);
+        board.set_piece(5, 2, Some(white_piece));
+        board.set_piece(4, 1, Some(black_piece1)); // Opponent 1
+        board.set_piece(4, 3, Some(black_piece2)); // Opponent 2
+
+        let moves = get_all_possible_moves(&board, 5, 2);
+        let expected_moves = vec![(3, 0), (3, 4)]; // Both capture moves
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_regular_black_single_capture() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        let white_piece = Piece::new(Color::White);
+        board.set_piece(2, 2, Some(black_piece));
+        board.set_piece(3, 3, Some(white_piece)); // Opponent to capture
+
+        let moves = get_all_possible_moves(&board, 2, 2);
+        let expected_moves = vec![(4, 4)]; // Only capture move
+        assert_moves_equal(&moves, &expected_moves);
+    }
+    
+    #[test]
+    fn test_regular_black_multiple_single_capture_options() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        let white_piece1 = Piece::new(Color::White);
+        let white_piece2 = Piece::new(Color::White);
+        board.set_piece(2, 2, Some(black_piece));
+        board.set_piece(3, 1, Some(white_piece1)); // Opponent 1
+        board.set_piece(3, 3, Some(white_piece2)); // Opponent 2
+
+        let moves = get_all_possible_moves(&board, 2, 2);
+        let expected_moves = vec![(4, 0), (4, 4)]; // Both capture moves
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    // 4. King - Single Captures
+    #[test]
+    fn test_king_single_capture_all_directions() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        let black_piece = Piece::new(Color::Black);
+        board.set_piece(3, 3, Some(white_king));
+        board.set_piece(2, 2, Some(black_piece.clone())); // Top-left
+        board.set_piece(2, 4, Some(black_piece.clone())); // Top-right
+        board.set_piece(4, 2, Some(black_piece.clone())); // Bottom-left
+        board.set_piece(4, 4, Some(black_piece.clone())); // Bottom-right
+
+        let moves = get_all_possible_moves(&board, 3, 3);
+        let expected_moves = vec![(1, 1), (1, 5), (5, 1), (5, 5)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+    
+    #[test]
+    fn test_king_single_capture_prefers_capture_over_regular() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        let black_piece = Piece::new(Color::Black);
+        board.set_piece(3, 3, Some(white_king));
+        board.set_piece(2, 2, Some(black_piece.clone())); // Opponent for capture
+
+        // Add other pieces to make sure regular moves would be possible if not for capture
+        // board.set_piece(2, 4, None); // Empty for potential regular move
+        // board.set_piece(4, 2, None); // Empty for potential regular move
+        // board.set_piece(4, 4, None); // Empty for potential regular move
+        
+        let moves = get_all_possible_moves(&board, 3, 3);
+        let expected_moves = vec![(1, 1)]; // Only the capture move
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    // 5. Regular Piece - Multi-Captures
+    #[test]
+    fn test_regular_white_double_capture() {
+        let mut board = Board::new(8);
+        let white_piece = Piece::new(Color::White);
+        let black_piece1 = Piece::new(Color::Black);
+        let black_piece2 = Piece::new(Color::Black);
+        board.set_piece(7, 0, Some(white_piece));
+        board.set_piece(6, 1, Some(black_piece1));
+        // (5,2) is empty
+        board.set_piece(4, 3, Some(black_piece2));
+        // (3,4) is empty
+
+        let moves = get_all_possible_moves(&board, 7, 0);
+        // The final landing position after the sequence of jumps
+        let expected_moves = vec![(3, 4)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    #[test]
+    fn test_regular_black_double_capture() {
+        let mut board = Board::new(8);
+        let black_piece = Piece::new(Color::Black);
+        let white_piece1 = Piece::new(Color::White);
+        let white_piece2 = Piece::new(Color::White);
+        board.set_piece(0, 1, Some(black_piece));
+        board.set_piece(1, 2, Some(white_piece1));
+        // (2,3) is empty
+        board.set_piece(3, 4, Some(white_piece2));
+        // (4,5) is empty
+
+        let moves = get_all_possible_moves(&board, 0, 1);
+        let expected_moves = vec![(4, 5)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+    
+    #[test]
+    fn test_regular_white_multiple_multi_capture_paths() {
+        let mut board = Board::new(8);
+        // W . . .
+        // . B . .
+        // . . W . (start)
+        // . B . B .
+        // . . . . .
+        // . B . .
+        // W . . .
+        // Path 1: (4,2) -> (2,0)
+        // Path 2: (4,2) -> (2,4) -> (0,6) (if board was larger, or piece was king)
+        // For regular piece, it will be (4,2) -> (2,4) only if no further jump in that dir.
+        // Let's set up simpler:
+        //    . . . . . . .
+        //    . B . B . . .  (B at 1,1 and 1,3)
+        //    . . W . . . .  (W at 2,2)
+        //    . B . B . . .  (B at 3,1 and 3,3)
+        //    . . . . . . .
+        // White piece at (4,3)
+        // Opponent at (3,2) -> jump to (2,1)
+        // Opponent at (1,0) -> jump to (0,0) X (cannot jump backwards)
+        // Opponent at (3,4) -> jump to (2,5)
+        // Opponent at (1,6) -> jump to (0,7) X (cannot jump backwards)
+        //
+        // Let's make it simpler for regular piece, must move forward.
+        // W at (6,1)
+        // B at (5,2) -> land (4,3)
+        // B at (3,4) -> land (2,5)  (Path 1: (2,5))
+        //
+        // W at (6,1)
+        // B at (5,0) -> land (4,0)
+        // B at (3,0) -> land (2,0) X (blocked by previous jump piece, this needs careful thought for test)
+        // The test should reflect that board state changes *during* the sequence for one path.
+        //
+        // Scenario: W at (6,1). B at (5,2). B at (3,2).
+        // (6,1) -> captures (5,2) -> lands at (4,3)
+        // From (4,3) -> captures (3,2) -> lands at (2,1)
+        // Expected: (2,1)
+        board.set_piece(6,1, Some(Piece::new(Color::White)));
+        board.set_piece(5,2, Some(Piece::new(Color::Black))); // first capture
+        // (4,3) is landing
+        board.set_piece(3,2, Some(Piece::new(Color::Black))); // second capture
+        // (2,1) is final landing
+
+        // Scenario: W at (6,5)
+        // B at (5,4) -> lands (4,3)
+        // B at (3,2) -> lands (2,1) (Path A)
+        //
+        // B at (5,6) -> lands (4,7)
+        // B at (3,6) -> lands (2,5) (Path B)
+        // Expected: (2,1), (2,5)
+
+        board.set_piece(6, 5, Some(Piece::new(Color::White)));
+        // Path A
+        board.set_piece(5, 4, Some(Piece::new(Color::Black))); // 1st jump for Path A
+        board.set_piece(3, 2, Some(Piece::new(Color::Black))); // 2nd jump for Path A
+        // Path B
+        board.set_piece(5, 6, Some(Piece::new(Color::Black))); // 1st jump for Path B
+        board.set_piece(3, 6, Some(Piece::new(Color::Black))); // 2nd jump for Path B
+        
+        let moves = get_all_possible_moves(&board, 6, 5);
+        let expected_moves = vec![(2,1), (2,5)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+
+    // 6. King - Multi-Captures
+    #[test]
+    fn test_king_multi_capture_changing_directions() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+        let black_piece1 = Piece::new(Color::Black);
+        let black_piece2 = Piece::new(Color::Black);
+
+        // K at (3,3)
+        // B at (2,2) -> K lands at (1,1)
+        // B at (2,0) -> K lands at (3,-1) X out of bounds
+        // B at (0,2) -> K lands at (-1,3) X out of bounds
+        // Let's try: K at (3,3). B at (2,2). B at (2,4)
+        // K captures (2,2) -> lands (1,1)
+        // From (1,1), K captures (2,4) (which is now opponent at (2,4) relative to original board, but (1,3) relative to (1,1))
+        // This means K needs to capture (2,2) -> (1,1), then from (1,1) capture an opponent at (2,0) or (0,2) or (0,0) etc.
+        // Setup: King at (3,3). Opponent at (2,2). Opponent at (0,2).
+        // (3,3) captures (2,2) -> lands at (1,1).
+        // From (1,1), captures (0,2) -> lands at (-1,3) X - no (0,2) is absolute
+        // From (1,1), captures piece at (2,0) relative to (1,1) i.e. absolute (3,1) No.
+        // From (1,1), captures piece at (abs 2,2) which is the one just jumped? No.
+        
+        // King at (4,3)
+        // B at (3,2) -> K lands at (2,1) // Forward-left capture
+        // B at (3,0) -> K lands at (4,-1) X // Backward-left capture from (2,1)
+        // Let's place second B at (1,2) relative to original board.
+        // King at (4,3). B1 at (3,2). B2 at (1,2).
+        // (4,3) captures B1 at (3,2) -> lands at (2,1).
+        // From (2,1), captures B2 at (1,2) -> lands at (0,3).
+        board.set_piece(4, 3, Some(white_king));
+        board.set_piece(3, 2, Some(black_piece1));
+        board.set_piece(1, 2, Some(black_piece2));
+
+        let moves = get_all_possible_moves(&board, 4, 3);
+        let expected_moves = vec![(0, 3)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+    
+    #[test]
+    fn test_king_multiple_multi_capture_paths() {
+        let mut board = Board::new(8);
+        let mut king = Piece::new(Color::White);
+        king.promote_to_king();
+        board.set_piece(3,3, Some(king));
+
+        // Path 1: (3,3) -> (1,1) -> (-1,-1) (lands (1,1))
+        board.set_piece(2,2, Some(Piece::new(Color::Black))); // cap1_1
+
+        // Path 2: (3,3) -> (1,5) -> (-1,7) (lands (1,5))
+        board.set_piece(2,4, Some(Piece::new(Color::Black))); // cap2_1
+        
+        // Path 3: (3,3) -> (5,1) -> (7,-1) (lands (5,1))
+        board.set_piece(4,2, Some(Piece::new(Color::Black))); // cap3_1
+
+        // Path 4: (3,3) -> (5,5) -> (7,7) (lands (5,5))
+        board.set_piece(4,4, Some(Piece::new(Color::Black))); // cap4_1
+
+        // Add second jumps to make them multi
+        // Path 1 extension: (1,1) -> captures (0,2) -> lands (-1,3) X
+        // Let's make path 1: (3,3) cap (2,2) land (1,1). Then from (1,1) cap (0,0) land (-1,-1) X
+        // (3,3) cap (2,2) land (1,1). Then from (1,1) cap (2,0) land (3,-1) X
+
+        // Simpler multi-jump paths for king:
+        // K at (3,3)
+        // Path A: B at (2,2) -> K lands (1,1). Then B at (0,2) -> K lands (-1,3) X
+        // Path A: B at (2,2) -> K lands (1,1). Then B at (2,0) -> K lands (3,-1) X
+        // Let's make pieces available for two distinct multi-jump paths
+        // K at (3,3)
+        // Path A: Capture (2,2) to land (1,1). Then capture (0,0) to land (-1,-1) X
+        // Path A: Capture (2,2) to land (1,1). Then capture (2,0) to land (3,-1) X.
+        // This is hard to setup without pieces overlapping if not careful.
+
+        // K at (3,3)
+        // Path A: (2,2) and (0,2) -> Expected: (-1,3) X.  (2,2) and (2,0)
+        // (3,3) -> cap (2,2) -> land (1,1). From (1,1) -> cap (2,0) -> land (3,-1) X. (abs coords for 2nd piece: (2,0))
+        // (3,3) -> cap (2,2) -> land (1,1). From (1,1) -> cap (0,2) -> land (-1,3) X (abs coords for 2nd piece: (0,2))
+        
+        // Reset board for clarity
+        board = Board::new(8);
+        let mut k = Piece::new(Color::White);
+        k.promote_to_king();
+        board.set_piece(3,3, Some(k));
+
+        // Path 1: (3,3) capture (2,2) to (1,1), then capture (0,2) to (-1,3) X
+        // Path 1: (3,3) capture (2,2) to (1,1), then capture (2,0) to (3,-1) X
+        // Path 1: (3,3) capture (2,2) to (1,1) [first jump]. Opponent at (0,0) for second jump. Lands (-1,-1) X
+        // Let's use the example from prompt description for get_all_possible_moves if possible.
+        // For now, two separate double jumps.
+        // Path A: (3,3) -> (1,1) -> (-1,-1)  Requires B at (2,2) and B at (0,0)
+        board.set_piece(2,2, Some(Piece::new(Color::Black))); // Path A, jump 1
+        board.set_piece(0,0, Some(Piece::new(Color::Black))); // Path A, jump 2 -> lands (-1,-1) X. Should be (2,2) then (0,0)
+                                                                // (3,3) via (2,2) lands (1,1). From (1,1) via (0,0) lands (-1,-1). This is not possible.
+                                                                // The piece at (0,0) is jumped from (1,1).
+        // Path B: (3,3) -> (1,5) -> (-1,7) Requires B at (2,4) and B at (0,6)
+        board.set_piece(2,4, Some(Piece::new(Color::Black))); // Path B, jump 1
+        board.set_piece(0,6, Some(Piece::new(Color::Black))); // Path B, jump 2 -> lands (-1,7) X.
+
+        // Let's use a concrete example that works on 8x8
+        // King at (7,0)
+        // B at (6,1) -> lands (5,2)
+        // B at (4,1) -> lands (3,0) (Path 1: (3,0))
+        //
+        // King at (7,0)
+        // B at (5,2) (this is the landing spot of first jump, so cannot be another piece)
+        //
+        // Need distinct pieces for distinct paths.
+        // K at (4,3)
+        // Path 1: B at (3,2) -> (2,1). B at (1,0) -> (0,0-invalid) X. (1,2) -> (0,3).
+        // (4,3) cap (3,2) land (2,1). Then cap (1,2) land (0,3). Path 1: (0,3)
+        // Path 2: (4,3) cap (3,4) land (2,5). Then cap (1,4) land (0,3). Path 2: (0,3)
+        // Path 2: (4,3) cap (3,4) land (2,5). Then cap (1,6) land (0,7). Path 2: (0,7)
+        //
+        let mut king_piece = Piece::new(Color::White);
+        king_piece.promote_to_king();
+        board.set_piece(4,3, Some(king_piece));
+        //Path 1
+        board.set_piece(3,2, Some(Piece::new(Color::Black)));
+        board.set_piece(1,2, Some(Piece::new(Color::Black)));
+        //Path 2
+        board.set_piece(3,4, Some(Piece::new(Color::Black)));
+        board.set_piece(1,6, Some(Piece::new(Color::Black)));
+        
+        let moves = get_all_possible_moves(&board, 4, 3);
+        let expected_moves = vec![(0,3), (0,7)];
+        assert_moves_equal(&moves, &expected_moves);
+    }
+
+    // 7. No Moves Possible
+    #[test]
+    fn test_regular_piece_no_moves_possible() {
+        let mut board = Board::new(8);
+        
+        // Scenario 1: White piece at starting row, blocked by friendly pieces or edge
+        let white_piece1 = Piece::new(Color::White);
+        board.set_piece(7, 0, Some(white_piece1)); // Piece at an edge
+        board.set_piece(6, 1, Some(Piece::new(Color::White))); // Blocked by friendly piece
+        let moves1 = get_all_possible_moves(&board, 7, 0);
+        assert_moves_equal(&moves1, &[]);
+
+        // Scenario 2: White piece at promotion row, cannot move backward (not a king)
+        // and forward moves are blocked by friendly pieces or edge.
+        let white_piece2 = Piece::new(Color::White);
+        board.set_piece(0, 1, Some(white_piece2)); // At promotion row
+        // Assuming it cannot move backward. If it could, these would block forward.
+        // No need to add blockers if it cannot move from promotion row unless it's a king.
+        // If it's at (0,1), it can only move to (-1,0) or (-1,2) which is out of bounds.
+        let moves2 = get_all_possible_moves(&board, 0, 1);
+        assert_moves_equal(&moves2, &[]);
+
+        // Scenario 3: White piece surrounded by friendly pieces
+        let white_piece3 = Piece::new(Color::White);
+        board.set_piece(5, 2, Some(white_piece3));
+        board.set_piece(4, 1, Some(Piece::new(Color::White)));
+        board.set_piece(4, 3, Some(Piece::new(Color::White)));
+        let moves3 = get_all_possible_moves(&board, 5, 2);
+        assert_moves_equal(&moves3, &[]);
+    }
+
+    #[test]
+    fn test_king_no_moves_possible() {
+        let mut board = Board::new(8);
+        let mut white_king = Piece::new(Color::White);
+        white_king.promote_to_king();
+
+        // Scenario 1: King at corner, blocked by friendly piece
+        board.set_piece(0, 0, Some(white_king)); 
+        board.set_piece(1, 1, Some(Piece::new(Color::White))); // Blocked by friendly
+        let moves1 = get_all_possible_moves(&board, 0, 0);
+        assert_moves_equal(&moves1, &[]);
+
+        // Scenario 2: King surrounded by friendly pieces
+        board.set_piece(0,0,None); // Clear previous
+        board.set_piece(1,1,None);
+        board.set_piece(3,3, Some(white_king));
+        board.set_piece(2,2, Some(Piece::new(Color::White)));
+        board.set_piece(2,4, Some(Piece::new(Color::White)));
+        board.set_piece(4,2, Some(Piece::new(Color::White)));
+        board.set_piece(4,4, Some(Piece::new(Color::White)));
+        let moves_surrounded = get_all_possible_moves(&board,3,3);
+        assert_moves_equal(&moves_surrounded, &[]);
+    }
+}
