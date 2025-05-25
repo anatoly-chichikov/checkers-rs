@@ -452,13 +452,13 @@ mod get_all_possible_moves_tests {
     fn test_regular_white_blocked_no_captures() {
         let mut board = Board::new(8);
         let white_piece = Piece::new(Color::White);
-        let blocking_piece = Piece::new(Color::Black); // Can be any color
+        let friendly_blocking_piece = Piece::new(Color::White); // Friendly piece
         board.set_piece(5, 2, Some(white_piece));
-        board.set_piece(4, 1, Some(blocking_piece));
-        board.set_piece(4, 3, Some(blocking_piece));
+        board.set_piece(4, 1, Some(friendly_blocking_piece)); // Blocked by friendly
+        board.set_piece(4, 3, Some(friendly_blocking_piece)); // Blocked by friendly
 
         let moves = get_all_possible_moves(&board, 5, 2);
-        let expected_moves: Vec<(usize, usize)> = vec![];
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
         assert_moves_equal(&moves, &expected_moves);
     }
 
@@ -466,13 +466,13 @@ mod get_all_possible_moves_tests {
     fn test_regular_black_blocked_no_captures() {
         let mut board = Board::new(8);
         let black_piece = Piece::new(Color::Black);
-        let blocking_piece = Piece::new(Color::White); // Can be any color
+        let friendly_blocking_piece = Piece::new(Color::Black); // Friendly piece
         board.set_piece(2, 2, Some(black_piece));
-        board.set_piece(3, 1, Some(blocking_piece));
-        board.set_piece(3, 3, Some(blocking_piece));
+        board.set_piece(3, 1, Some(friendly_blocking_piece)); // Blocked by friendly
+        board.set_piece(3, 3, Some(friendly_blocking_piece)); // Blocked by friendly
 
         let moves = get_all_possible_moves(&board, 2, 2);
-        let expected_moves: Vec<(usize, usize)> = vec![];
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
         assert_moves_equal(&moves, &expected_moves);
     }
 
@@ -512,15 +512,15 @@ mod get_all_possible_moves_tests {
         let mut board = Board::new(8);
         let mut white_king = Piece::new(Color::White);
         white_king.promote_to_king();
-        let blocking_piece = Piece::new(Color::Black);
+        let friendly_blocking_piece = Piece::new(Color::White); // Friendly piece
         board.set_piece(3, 3, Some(white_king));
-        board.set_piece(2, 2, Some(blocking_piece));
-        board.set_piece(2, 4, Some(blocking_piece));
-        board.set_piece(4, 2, Some(blocking_piece));
-        board.set_piece(4, 4, Some(blocking_piece));
+        board.set_piece(2, 2, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(2, 4, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(4, 2, Some(friendly_blocking_piece.clone())); // Blocked by friendly
+        board.set_piece(4, 4, Some(friendly_blocking_piece.clone())); // Blocked by friendly
 
         let moves = get_all_possible_moves(&board, 3, 3);
-        let expected_moves: Vec<(usize, usize)> = vec![];
+        let expected_moves: Vec<(usize, usize)> = vec![]; // Expect no moves
         assert_moves_equal(&moves, &expected_moves);
     }
 
@@ -834,7 +834,9 @@ mod get_all_possible_moves_tests {
         // Path 2: (4,3) cap (3,4) land (2,5). Then cap (1,4) land (0,3). Path 2: (0,3)
         // Path 2: (4,3) cap (3,4) land (2,5). Then cap (1,6) land (0,7). Path 2: (0,7)
         //
-        board.set_piece(4,3, Some(Piece::new(Color::White).make_king()));
+        let mut king_piece = Piece::new(Color::White);
+        king_piece.promote_to_king();
+        board.set_piece(4,3, Some(king_piece));
         //Path 1
         board.set_piece(3,2, Some(Piece::new(Color::Black)));
         board.set_piece(1,2, Some(Piece::new(Color::Black)));
@@ -851,22 +853,31 @@ mod get_all_possible_moves_tests {
     #[test]
     fn test_regular_piece_no_moves_possible() {
         let mut board = Board::new(8);
-        let white_piece = Piece::new(Color::White);
-        // Piece at white's starting row, but blocked
-        board.set_piece(7, 0, Some(white_piece));
-        board.set_piece(6, 1, Some(Piece::new(Color::Black))); // Blocking regular move
-
-        // Also test piece at promotion row (should not move backward if not king)
-        board.set_piece(0,1, Some(Piece::new(Color::White)));
-        board.set_piece(1,0, Some(Piece::new(Color::Black)));
-        board.set_piece(1,2, Some(Piece::new(Color::Black)));
-
-
+        
+        // Scenario 1: White piece at starting row, blocked by friendly pieces or edge
+        let white_piece1 = Piece::new(Color::White);
+        board.set_piece(7, 0, Some(white_piece1)); // Piece at an edge
+        board.set_piece(6, 1, Some(Piece::new(Color::White))); // Blocked by friendly piece
         let moves1 = get_all_possible_moves(&board, 7, 0);
         assert_moves_equal(&moves1, &[]);
-        
+
+        // Scenario 2: White piece at promotion row, cannot move backward (not a king)
+        // and forward moves are blocked by friendly pieces or edge.
+        let white_piece2 = Piece::new(Color::White);
+        board.set_piece(0, 1, Some(white_piece2)); // At promotion row
+        // Assuming it cannot move backward. If it could, these would block forward.
+        // No need to add blockers if it cannot move from promotion row unless it's a king.
+        // If it's at (0,1), it can only move to (-1,0) or (-1,2) which is out of bounds.
         let moves2 = get_all_possible_moves(&board, 0, 1);
         assert_moves_equal(&moves2, &[]);
+
+        // Scenario 3: White piece surrounded by friendly pieces
+        let white_piece3 = Piece::new(Color::White);
+        board.set_piece(5, 2, Some(white_piece3));
+        board.set_piece(4, 1, Some(Piece::new(Color::White)));
+        board.set_piece(4, 3, Some(Piece::new(Color::White)));
+        let moves3 = get_all_possible_moves(&board, 5, 2);
+        assert_moves_equal(&moves3, &[]);
     }
 
     #[test]
@@ -874,14 +885,16 @@ mod get_all_possible_moves_tests {
         let mut board = Board::new(8);
         let mut white_king = Piece::new(Color::White);
         white_king.promote_to_king();
-        board.set_piece(0, 0, Some(white_king)); // King at corner
-        board.set_piece(1, 1, Some(Piece::new(Color::Black))); // Block potential move/capture
 
-        let moves = get_all_possible_moves(&board, 0, 0);
-        let expected_moves: Vec<(usize, usize)> = vec![];
-        assert_moves_equal(&moves, &expected_moves);
+        // Scenario 1: King at corner, blocked by friendly piece
+        board.set_piece(0, 0, Some(white_king)); 
+        board.set_piece(1, 1, Some(Piece::new(Color::White))); // Blocked by friendly
+        let moves1 = get_all_possible_moves(&board, 0, 0);
+        assert_moves_equal(&moves1, &[]);
 
-        // King surrounded
+        // Scenario 2: King surrounded by friendly pieces
+        board.set_piece(0,0,None); // Clear previous
+        board.set_piece(1,1,None);
         board.set_piece(3,3, Some(white_king));
         board.set_piece(2,2, Some(Piece::new(Color::White)));
         board.set_piece(2,4, Some(Piece::new(Color::White)));
@@ -889,6 +902,5 @@ mod get_all_possible_moves_tests {
         board.set_piece(4,4, Some(Piece::new(Color::White)));
         let moves_surrounded = get_all_possible_moves(&board,3,3);
         assert_moves_equal(&moves_surrounded, &[]);
-
     }
 }
