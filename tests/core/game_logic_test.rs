@@ -234,3 +234,144 @@ fn test_check_winner() {
     board.set_piece(5, 2, None);
     assert_eq!(game_logic::check_winner(&board), Some(Color::Black));
 } 
+
+// Tests for can_piece_capture
+
+#[test]
+fn test_can_piece_capture_positive_white_regular() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(5, 2, Some(white_piece));
+    board.set_piece(4, 3, Some(black_piece)); // Opponent to capture
+    // Landing spot (3,4) is empty
+    assert!(game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_positive_black_regular() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(2, 2, Some(black_piece));
+    board.set_piece(3, 3, Some(white_piece)); // Opponent to capture
+    // Landing spot (4,4) is empty
+    assert!(game_logic::can_piece_capture(&board, 2, 2));
+}
+
+#[test]
+fn test_can_piece_capture_positive_white_king() {
+    let mut board = Board::new(8);
+    let mut white_king = Piece::new(Color::White);
+    white_king.promote_to_king();
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(5, 2, Some(white_king));
+    board.set_piece(4, 3, Some(black_piece)); // Capture forward
+    assert!(game_logic::can_piece_capture(&board, 5, 2));
+
+    board.set_piece(4, 3, None); // Clear previous opponent
+    board.set_piece(6, 3, Some(black_piece)); // Capture backward
+    assert!(game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_positive_black_king() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let mut black_king = Piece::new(Color::Black);
+    black_king.promote_to_king();
+    board.set_piece(2, 2, Some(black_king));
+    board.set_piece(3, 3, Some(white_piece)); // Capture forward
+    assert!(game_logic::can_piece_capture(&board, 2, 2));
+
+    board.set_piece(3, 3, None); // Clear previous opponent
+    board.set_piece(1, 3, Some(white_piece)); // Capture backward
+    assert!(game_logic::can_piece_capture(&board, 2, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_no_opponent_piece() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    board.set_piece(5, 2, Some(white_piece));
+    // Middle spot (4,3) is empty, landing (3,4) is empty
+    assert!(!game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_landing_blocked() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(5, 2, Some(white_piece));
+    board.set_piece(4, 3, Some(black_piece));
+    board.set_piece(3, 4, Some(white_piece)); // Landing spot blocked by own piece
+    assert!(!game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_landing_out_of_bounds() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(1, 0, Some(white_piece));
+    board.set_piece(0, 1, Some(black_piece)); // Opponent to capture
+    // Landing spot (-1, 2) is out of bounds
+    assert!(!game_logic::can_piece_capture(&board, 1, 0));
+}
+
+#[test]
+fn test_can_piece_capture_negative_opponent_but_no_empty_landing() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(5, 2, Some(white_piece));
+    board.set_piece(4, 3, Some(black_piece));
+    board.set_piece(3, 4, Some(black_piece)); // Landing spot blocked by other opponent piece
+    assert!(!game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_wrong_direction_regular_white() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(3, 2, Some(white_piece));
+    board.set_piece(4, 3, Some(black_piece)); // Opponent is "behind" white piece
+    // Landing spot (5,4) is empty
+    assert!(!game_logic::can_piece_capture(&board, 3, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_wrong_direction_regular_black() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    let black_piece = Piece::new(Color::Black);
+    board.set_piece(5, 2, Some(black_piece));
+    board.set_piece(4, 3, Some(white_piece)); // Opponent is "behind" black piece
+    // Landing spot (3,4) is empty
+    assert!(!game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_no_piece_at_coords() {
+    let board = Board::new(8); // Empty board
+    assert!(!game_logic::can_piece_capture(&board, 5, 2));
+}
+
+#[test]
+fn test_can_piece_capture_negative_piece_no_moves() {
+    let mut board = Board::new(8);
+    let white_piece = Piece::new(Color::White);
+    board.set_piece(0, 0, Some(white_piece)); // Cornered piece
+    // Fill surrounding potential jump spots to ensure no capture
+    board.set_piece(1,1, Some(Piece::new(Color::White))); // Block simple move/jump
+    // No opponent to jump anyway
+    assert!(!game_logic::can_piece_capture(&board, 0, 0));
+
+    let mut board2 = Board::new(8);
+    let white_piece2 = Piece::new(Color::White);
+    board2.set_piece(7,0, Some(white_piece2));
+    board2.set_piece(6,1, Some(Piece::new(Color::White)));
+    assert!(!game_logic::can_piece_capture(&board2,7,0));
+}
