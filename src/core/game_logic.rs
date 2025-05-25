@@ -62,7 +62,7 @@ fn find_capture_moves_recursive(
 
                     if is_capture_valid_for_piece {
                         let mut new_board = board.clone(); // Create a new board state for this path
-                        new_board.remove_piece(mid_row, mid_col); // Remove the captured piece
+                        new_board.set_piece(mid_row, mid_col, None); // Remove the captured piece
                         // Temporarily move the piece on the new board to explore further jumps
                         // The original piece object (with its king status) is carried through.
                         // We don't actually place it on new_board for this check, as we only need its properties.
