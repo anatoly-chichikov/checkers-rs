@@ -36,6 +36,6 @@ cargo test
 **Environment Variables:**
 Create a `.env` file with:
 ```env
-NEBIUS_API_KEY=your_nebius_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
-*(This enables AI-powered rule explanations; the game will still work without it.)*
+*(This enables AI-powered rule explanations and AI opponent moves; the game will still work without it, but the AI opponent will not function.)*
