@@ -1,39 +1,38 @@
 use serde::{Deserialize, Serialize};
 
+// New structs for Gemini API communication
 #[derive(Debug, Serialize)]
-pub struct NebiusRequest {
-    pub model: String,
-    pub messages: Vec<Message>,
-    pub max_tokens: u32,
-    pub temperature: f32,
-    pub top_p: f32,
-    pub top_k: u32,
+pub struct GeminiRequest {
+    pub contents: Vec<Content>,
+    #[serde(rename = "generationConfig")]
+    pub generation_config: GenerationConfig,
 }
 
-#[derive(Debug, Serialize)]
-pub struct Message {
-    pub role: String,
-    pub content: Vec<Content>,
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Content {
-    #[serde(rename = "type")]
-    pub content_type: String,
+    pub parts: Vec<Part>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Part {
     pub text: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct NebiusResponse {
-    pub choices: Vec<Choice>,
+#[derive(Debug, Serialize)]
+pub struct GenerationConfig {
+    pub temperature: f32,
+    #[serde(rename = "maxOutputTokens")]
+    pub max_output_tokens: u32,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Choice {
-    pub message: ResponseMessage,
+pub struct GeminiResponse {
+    pub candidates: Vec<Candidate>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ResponseMessage {
-    pub content: String,
+pub struct Candidate {
+    pub content: Content,
+    #[serde(rename = "finishReason")]
+    pub finish_reason: String,
 } 
