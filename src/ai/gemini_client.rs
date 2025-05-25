@@ -7,7 +7,7 @@ use crate::ai::ui::{start_loading_animation, stop_loading_animation};
 use crate::interface::messages;
 use crate::core::game::CheckersGame;
 use crate::core::board::Board;
-use crate::core::piece::{Color as PieceColor, Piece}; // Renamed Color to PieceColor to avoid conflict
+use crate::core::piece::Color as PieceColor; // Renamed Color to PieceColor to avoid conflict, removed Piece
 use crate::core::game_logic::get_all_valid_moves_for_player;
 
 // Helper function to format square coordinates (e.g., (0,0) to "A1")
@@ -22,13 +22,11 @@ fn format_board(board: &Board) -> String {
     for r in 0..8 {
         board_str.push_str(&format!("{} ", r + 1));
         for c in 0..8 {
-            match board.get_piece(r, c) {
-                Some(Piece::Pawn(PieceColor::White)) => board_str.push('w'),
-                Some(Piece::Pawn(PieceColor::Black)) => board_str.push('b'),
-                Some(Piece::King(PieceColor::White)) => board_str.push('W'),
-                Some(Piece::King(PieceColor::Black)) => board_str.push('B'),
-                None => board_str.push('.'),
-            }
+            let piece_char = match board.get_piece(r, c) {
+                Some(piece) => piece.display(),
+                None => '.',
+            };
+            board_str.push(piece_char);
             board_str.push(' ');
         }
         board_str.push('\n');
@@ -74,9 +72,10 @@ pub async fn explain_rules() -> Result<String, AIError> {
     // Stop the loading animation and cleanup
     stop_loading_animation(running, loading_thread)?;
 
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() {
         let error_body = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!("API request failed: {}", error_body)));
+        return Err(AIError::RequestFailed(format!("API request failed with status {}: {}", status, error_body)));
     }
 
     let response_data: GeminiResponse = response
@@ -115,19 +114,19 @@ pub async fn get_ai_move(
 
     let board_representation = format_board(&game.board);
     let mut moves_str = String::new();
-    for (i, (from, to, is_capture)) in possible_moves.iter().enumerate() {
-        moves_str.push_str(&format!(
-            "{}. {} to {}",
-            i + 1,
-            format_square(from.0, from.1),
-            format_square(to.0, to.1)
-        ));
+    for (i, ((from_row, from_col), (to_row, to_col), is_capture)) in possible_moves.iter().enumerate() {
+        let formatted_from_sq = format_square(*from_row, *from_col);
+        let formatted_to_sq = format_square(*to_row, *to_col);
+        let mut move_desc = format!("{}. {} to {}", i + 1, formatted_from_sq, formatted_to_sq);
+
         if *is_capture {
-            // In checkers, a jump might involve capturing a piece that's not directly on the 'to' square.
-            // The exact captured piece location would need more complex logic if we wanted to state it.
-            // For now, just indicating a capture is sufficient for the AI's choice.
-            moves_str.push_str(" (captures)");
+            // Calculate midpoint for capture
+            let mid_row = (from_row + to_row) / 2;
+            let mid_col = (from_col + to_col) / 2;
+            let formatted_captured_sq = format_square(mid_row, mid_col);
+            move_desc.push_str(&format!(" (captures piece at {})", formatted_captured_sq));
         }
+        moves_str.push_str(&move_desc);
         moves_str.push_str("\n");
     }
 
@@ -166,9 +165,10 @@ pub async fn get_ai_move(
 
     stop_loading_animation(running, loading_thread)?;
 
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() {
         let error_body = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!("API request failed with status {}: {}", response.status(), error_body)));
+        return Err(AIError::RequestFailed(format!("API request failed with status {}: {}", status, error_body)));
     }
 
     let response_data: GeminiResponse = response
@@ -179,19 +179,25 @@ pub async fn get_ai_move(
     if let Some(candidate) = response_data.candidates.first() {
         if let Some(part) = candidate.content.parts.first() {
             let text_response = part.text.trim();
-            match text_response.parse::<usize>() {
+            // Try to parse only the numeric part, handling potential trailing characters like '.'
+            let cleaned_response = text_response.chars().filter(|c| c.is_digit(10)).collect::<String>();
+            match cleaned_response.parse::<usize>() {
                 Ok(move_number) if move_number > 0 && move_number <= possible_moves.len() => {
                     let chosen_move_data = &possible_moves[move_number - 1];
-                    Ok(((chosen_move_data.0.0, chosen_move_data.0.1), (chosen_move_data.1.0, chosen_move_data.1.1)))
+                    // chosen_move_data is ((from_r, from_c), (to_r, to_c), is_capture)
+                    // We need to return Ok(((from_r, from_c), (to_r, to_c)))
+                    Ok((chosen_move_data.0, chosen_move_data.1))
                 }
                 Ok(_) => Err(AIError::InvalidResponseFormat(format!(
-                    "Move index {} is out of bounds. Valid range: 1-{}",
-                    text_response,
-                    possible_moves.len()
+                    "Move index {} is out of bounds. Valid range: 1-{}. Original response: '{}'",
+                    cleaned_response,
+                    possible_moves.len(),
+                    text_response
                 ))),
                 Err(_) => Err(AIError::InvalidResponseFormat(format!(
-                    "AI returned non-numeric or invalid response: '{}'",
-                    text_response
+                    "AI returned non-numeric or invalid response: '{}'. Cleaned: '{}'",
+                    text_response,
+                    cleaned_response
                 ))),
             }
         } else {
@@ -204,7 +210,7 @@ pub async fn get_ai_move(
 
 #[cfg(test)]
 mod tests {
-    use super::*; // Import items from the outer module
+    // Removed: use super::*;
 
     #[test]
     fn test_parse_ai_move_string() {

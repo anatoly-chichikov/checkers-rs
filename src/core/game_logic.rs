@@ -9,6 +9,56 @@ pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
     }
 }
 
+pub fn get_all_valid_moves_for_player(
+    board: &Board,
+    player_color: Color,
+) -> Vec<((usize, usize), (usize, usize), bool)> {
+    let mut capture_moves: Vec<((usize, usize), (usize, usize), bool)> = Vec::new();
+    let mut regular_moves: Vec<((usize, usize), (usize, usize), bool)> = Vec::new();
+
+    for r in 0..board.size {
+        for c in 0..board.size {
+            if let Some(piece) = board.get_piece(r, c) {
+                if piece.color == player_color {
+                    let possible_destinations = get_all_possible_moves(board, r, c);
+                    for (to_r, to_c) in possible_destinations {
+                        let is_capture = (to_r as i32 - r as i32).abs() == 2;
+                        // Also ensure column difference is 2 for a capture, to be certain.
+                        // This helps differentiate from potential future non-diagonal moves if rules change.
+                        let is_col_capture_distance = (to_c as i32 - c as i32).abs() == 2;
+
+                        if is_capture && is_col_capture_distance {
+                            capture_moves.push(((r, c), (to_r, to_c), true));
+                        } else {
+                            // Only add if it's not a capture-distance move that failed the column check
+                            // or if it's a standard 1-step move.
+                            // A 2-step non-capture move isn't standard in checkers.
+                            if (to_r as i32 - r as i32).abs() == 1 && (to_c as i32 - c as i32).abs() == 1 {
+                                regular_moves.push(((r, c), (to_r, to_c), false));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !capture_moves.is_empty() {
+        // In checkers, if a capture is available, it must be taken.
+        // Further, if multiple jumps are part of a single capture sequence,
+        // get_all_possible_moves (via find_capture_moves_recursive) should return
+        // the final landing spot of such sequences.
+        // The current implementation collects all *final* positions of capture sequences.
+        // We need to ensure that only the final step of each sequence is considered if multi-jumps
+        // are returned as separate steps by get_all_possible_moves.
+        // However, get_all_possible_moves is designed to return only the *final* landing spots
+        // of full capture sequences. So, each entry in capture_moves should represent a complete capture.
+        capture_moves
+    } else {
+        regular_moves
+    }
+}
+
 // Helper function to find all capture sequences for a piece
 fn find_capture_moves_recursive(
     board: &Board,
