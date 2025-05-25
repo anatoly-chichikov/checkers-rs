@@ -18,7 +18,8 @@ use crate::interface::input::{CursorDirection, GameInput};
 use crate::interface::messages;
 use crate::interface::ui::UI;
 use crate::utils::markdown::parser::MarkdownRenderer;
-use crate::ai::{explain_rules, AIError};
+use crate::ai::{explain_rules, get_ai_move, AIError};
+use crate::core::piece::Color as PieceColor;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -127,6 +128,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 GameInput::Quit => break,
             }
+        }
+
+        // AI's turn (Black)
+        if game.current_player == PieceColor::Black && !game.is_game_over {
+            // Display AI thinking message
+            stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
+            let thinking_msg = format_model_output("Black (AI) is thinking...")?;
+            write!(stdout, "{}", thinking_msg)?; // Using write! to handle potential ANSI codes from format_model_output
+            stdout.queue(MoveTo(0, game.board.size as u16 + 5))?; // Move cursor down for next line
+            stdout.flush()?;
+
+            match get_ai_move(&game).await {
+                Ok(((from_row, from_col), (to_row, to_col))) => {
+                    // Attempt to make the AI's move
+                    if let Err(e) = game.select_piece(from_row, from_col) {
+                        stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
+                        let error_msg = format_model_output(&format!(
+                            "{} AI failed to select piece: {}. Skipping turn.",
+                            messages::ERROR_PREFIX,
+                            e
+                        ))?;
+                        writeln!(stdout, "{}", error_msg)?;
+                        stdout.flush()?;
+                        game.switch_player(); // Switch to White if AI selection fails
+                    } else {
+                        if let Err(e) = game.make_move(to_row, to_col) {
+                            stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
+                            let error_msg = format_model_output(&format!(
+                                "{} AI failed to make move: {}. Skipping turn.",
+                                messages::ERROR_PREFIX,
+                                e
+                            ))?;
+                            writeln!(stdout, "{}", error_msg)?;
+                            stdout.flush()?;
+                            // make_move switches player on success, if it fails before switching,
+                            // and it was Black's turn, it should become White's turn.
+                            if game.current_player == PieceColor::Black {
+                                game.switch_player();
+                            }
+                        }
+                        // Successful move, player is already switched by make_move
+                    }
+                }
+                Err(ai_error) => {
+                    stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
+                    let error_msg = format_model_output(&format!(
+                        "{} AI error: {}. Skipping turn.",
+                        messages::ERROR_PREFIX,
+                        ai_error
+                    ))?;
+                    writeln!(stdout, "{}", error_msg)?;
+                    stdout.flush()?;
+                    game.switch_player(); // Switch to White if AI errors
+                }
+            }
+            // The main ui.render_game(&game)? at the start of the loop will redraw.
+            // A small delay can make AI moves more observable.
+            // std::thread::sleep(std::time::Duration::from_millis(500)); // Optional: for better UX
         }
 
         // Check for game over
