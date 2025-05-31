@@ -55,18 +55,16 @@ impl UI {
         self.cursor_pos
     }
 
-    fn get_cell_border_style(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> Color {
-        if cell_pos == self.cursor_pos
-            || game.selected_piece == Some(cell_pos)
-            || game
-                .possible_moves
-                .as_ref()
-                .is_some_and(|m| m.contains(&cell_pos))
-        {
-            Color::Grey
-        } else {
-            Color::DarkGrey
-        }
+    fn should_highlight_horizontal(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> bool {
+        // Horizontal lines (top/bottom) for cursor and selected piece
+        cell_pos == self.cursor_pos || game.selected_piece == Some(cell_pos)
+    }
+
+    fn should_highlight_vertical(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> bool {
+        // Vertical lines (left/right) for possible moves
+        game.possible_moves
+            .as_ref()
+            .is_some_and(|m| m.contains(&cell_pos))
     }
 
     fn render_column_headers(stdout: &mut io::Stdout, board_size: usize) -> io::Result<()> {
@@ -133,13 +131,13 @@ impl UI {
                     let mut segment_highlighted = false;
                     if row > 0 {
                         let cell_above = (row - 1, col);
-                        if self.get_cell_border_style(game, cell_above) != Color::DarkGrey {
+                        if self.should_highlight_horizontal(game, cell_above) {
                             segment_highlighted = true;
                         }
                     }
                     if row < game.board.size {
                         let cell_below = (row, col);
-                        if self.get_cell_border_style(game, cell_below) != Color::DarkGrey {
+                        if self.should_highlight_horizontal(game, cell_below) {
                             segment_highlighted = true;
                         }
                     }
@@ -176,19 +174,19 @@ impl UI {
                     let mut border_highlighted = false;
                     if col > 0 {
                         let cell_left = (row, col - 1);
-                        if self.get_cell_border_style(game, cell_left) != Color::DarkGrey {
+                        if self.should_highlight_vertical(game, cell_left) {
                             border_highlighted = true;
                         }
                     }
                     if col < game.board.size {
                         let cell_right = (row, col);
-                        if self.get_cell_border_style(game, cell_right) != Color::DarkGrey {
+                        if self.should_highlight_vertical(game, cell_right) {
                             border_highlighted = true;
                         }
                     }
 
                     let border_color = if border_highlighted {
-                        Color::Grey
+                        Color::Blue
                     } else {
                         Color::DarkGrey
                     };
@@ -211,7 +209,7 @@ impl UI {
                                     if (row + col) % 2 == 0 {
                                         ("     ".to_string(), Color::DarkGrey, false)
                                     } else {
-                                        ("░░░░░".to_string(), Color::DarkGrey, false)
+                                        (" ░░░ ".to_string(), Color::DarkGrey, false)
                                     }
                                 }
                             };
