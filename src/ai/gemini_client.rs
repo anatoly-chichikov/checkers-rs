@@ -22,12 +22,12 @@ fn format_board(board: &Board) -> String {
     for r in 0..8 {
         board_str.push_str(&format!("{} ", r + 1));
         for c in 0..8 {
-            let piece_char = match board.get_piece(r, c) {
-                Some(piece) => piece.display(),
-                None => '.',
+            let piece_str: String = match board.get_piece(r, c) {
+                Some(piece) => piece.display(), // Returns String, e.g., "(w)"
+                None => ".".to_string(),        // Returns String, "."
             };
-            board_str.push(piece_char);
-            board_str.push(' ');
+            board_str.push_str(&piece_str); // Append the string representation
+            board_str.push(' '); // Add a space after the piece or placeholder
         }
         board_str.push('\n');
     }
