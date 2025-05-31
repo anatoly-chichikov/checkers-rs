@@ -28,7 +28,7 @@ A terminal-based Checkers game built with Rust.
    ```
 
 **Game Modes:**
-- **With AI (requires API key):** Human plays as Red (white pieces) vs AI as Black
+- **With AI (requires API key):** Human plays as White vs AI as Black
 - **Two-player mode (no API key):** Players take turns on the same keyboard
 
 **Controls:**
@@ -37,8 +37,8 @@ A terminal-based Checkers game built with Rust.
 - **Esc or Q:** Exit the game
 
 **Rules:**
-- Red pieces (displayed as white) start at the bottom
-- Black pieces (displayed as red) start at the top
+- White pieces start at the bottom
+- Black pieces start at the top
 - Regular pieces can only move diagonally forward
 - Kings (marked with brackets) can move in any diagonal direction
 - Captures are mandatory - if you can capture, you must
