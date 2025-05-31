@@ -23,10 +23,10 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
         let spinner_frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         let mut frame_idx = 0;
         let message = "Waiting for the magic...";
-        
+
         while running_clone.load(Ordering::Relaxed) {
             let mut stdout = io::stdout();
-            
+
             // Get terminal size and calculate position
             if let Ok((width, _)) = size() {
                 // Calculate board dimensions
@@ -36,12 +36,12 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
                 } else {
                     0
                 };
-                
+
                 // Position aligned with board's right edge
                 let message_len = message.len() + 2; // +2 for spinner and space
                 let x_pos = board_offset + board_width - message_len - 1;
                 let y_pos = 1; // Second row, below top border
-                
+
                 // Save cursor position, move to upper right, print, restore cursor
                 let _ = stdout.execute(crossterm::cursor::SavePosition);
                 let _ = stdout.execute(MoveTo(x_pos as u16, y_pos));
@@ -50,11 +50,11 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
                 let _ = stdout.execute(crossterm::cursor::RestorePosition);
                 let _ = stdout.flush();
             }
-            
+
             frame_idx = (frame_idx + 1) % spinner_frames.len();
             thread::sleep(Duration::from_millis(100));
         }
-        
+
         // Clear the spinner when done
         let mut stdout = io::stdout();
         if let Ok((width, _)) = size() {
@@ -65,11 +65,11 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
             } else {
                 0
             };
-            
+
             // Position aligned with board's right edge
             let message_len = message.len() + 2;
             let x_pos = board_offset + board_width - message_len - 1;
-            
+
             let _ = stdout.execute(crossterm::cursor::SavePosition);
             let _ = stdout.execute(MoveTo(x_pos as u16, 1));
             let _ = stdout.execute(Clear(ClearType::UntilNewLine));
