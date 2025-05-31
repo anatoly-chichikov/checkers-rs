@@ -81,7 +81,6 @@ fn print_centered_line(stdout: &mut io::Stdout, text: &str, width: usize) -> io:
 }
 
 fn print_ascii_art_header(stdout: &mut io::Stdout) -> io::Result<()> {
-    const HEADER_WIDTH: usize = 65;
     stdout.queue(SetForegroundColor(Color::Red))?;
 
     writeln!(stdout)?;
