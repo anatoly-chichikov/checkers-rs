@@ -15,9 +15,9 @@ pub struct UI {
 }
 
 fn get_board_width() -> usize {
-    // Each cell is 7 chars wide (-------) and we have 8 cells
+    // Each cell is 5 chars wide plus borders, total 6 chars per cell
     // Plus 3 chars for row numbers on the left
-    3 + (7 * 8)
+    3 + (6 * 8) + 1 // +1 for the final border
 }
 
 fn get_centering_offset() -> usize {
@@ -55,19 +55,16 @@ impl UI {
         self.cursor_pos
     }
 
-    fn get_cell_border_style(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> Color {
-        if cell_pos == self.cursor_pos {
-            Color::White
-        } else if game.selected_piece == Some(cell_pos)
-            || game
-                .possible_moves
-                .as_ref()
-                .is_some_and(|m| m.contains(&cell_pos))
-        {
-            Color::Grey
-        } else {
-            Color::DarkGrey
-        }
+    fn should_highlight_horizontal(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> bool {
+        // Horizontal lines (top/bottom) for cursor and selected piece
+        cell_pos == self.cursor_pos || game.selected_piece == Some(cell_pos)
+    }
+
+    fn should_highlight_vertical(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> bool {
+        // Vertical lines (left/right) for possible moves
+        game.possible_moves
+            .as_ref()
+            .is_some_and(|m| m.contains(&cell_pos))
     }
 
     fn render_column_headers(stdout: &mut io::Stdout, board_size: usize) -> io::Result<()> {
@@ -79,7 +76,7 @@ impl UI {
         stdout.queue(SetForegroundColor(Color::Blue))?;
         stdout.queue(Print("   "))?;
         for col in 0..board_size {
-            write!(stdout, "   {}   ", (b'A' + col as u8) as char)?;
+            write!(stdout, "   {}  ", (b'A' + col as u8) as char)?;
         }
         stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
@@ -89,96 +86,149 @@ impl UI {
     fn render_board_rows(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         let offset = get_centering_offset();
 
-        for row in 0..game.board.size {
-            // Top border of cells
+        // Helper function to get the appropriate junction character
+        let get_junction = |row: usize, col: usize| -> &'static str {
+            if row == 0 {
+                if col == 0 {
+                    "┌"
+                } else if col == 8 {
+                    "┐"
+                } else {
+                    "┬"
+                }
+            } else if row == 8 {
+                if col == 0 {
+                    "└"
+                } else if col == 8 {
+                    "┘"
+                } else {
+                    "┴"
+                }
+            } else if col == 0 {
+                "├"
+            } else if col == 8 {
+                "┤"
+            } else {
+                "┼"
+            }
+        };
+
+        // Render each row including its top border
+        for row in 0..=game.board.size {
+            // Render horizontal border
             if offset > 0 {
                 write!(stdout, "{}", " ".repeat(offset))?;
             }
             stdout.write_all(b"   ")?;
-            for col in 0..game.board.size {
-                let cell_border_color = self.get_cell_border_style(game, (row, col));
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                stdout.write_all(b"+-----+")?;
-                stdout.queue(ResetColor)?;
+
+            for col in 0..=game.board.size {
+                // Draw junction (always use normal color)
+                stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+                write!(stdout, "{}", get_junction(row, col))?;
+
+                // Draw horizontal line segment
+                if col < game.board.size {
+                    let mut segment_highlighted = false;
+                    if row > 0 {
+                        let cell_above = (row - 1, col);
+                        if self.should_highlight_horizontal(game, cell_above) {
+                            segment_highlighted = true;
+                        }
+                    }
+                    if row < game.board.size {
+                        let cell_below = (row, col);
+                        if self.should_highlight_horizontal(game, cell_below) {
+                            segment_highlighted = true;
+                        }
+                    }
+
+                    if segment_highlighted {
+                        // Draw highlighted segment with spacing
+                        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+                        write!(stdout, "─")?;
+                        stdout.queue(SetForegroundColor(Color::Grey))?;
+                        write!(stdout, "━━━")?;
+                        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+                        write!(stdout, "─")?;
+                    } else {
+                        // Draw normal segment
+                        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+                        write!(stdout, "─────")?;
+                    }
+                }
             }
+            stdout.queue(ResetColor)?;
             stdout.write_all(b"\n\r")?;
 
-            // Cell contents
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.queue(SetForegroundColor(Color::Blue))?;
-            write!(stdout, "{:2} ", row + 1)?;
-            stdout.queue(ResetColor)?;
-
-            for col in 0..game.board.size {
-                let cell_border_color = self.get_cell_border_style(game, (row, col));
-
-                // Left border of the cell
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                write!(stdout, "|")?;
+            // Render cell contents row (if not the last border row)
+            if row < game.board.size {
+                if offset > 0 {
+                    write!(stdout, "{}", " ".repeat(offset))?;
+                }
+                stdout.queue(SetForegroundColor(Color::Blue))?;
+                write!(stdout, "{:2} ", row + 1)?;
                 stdout.queue(ResetColor)?;
 
-                let (content_to_display, text_color_for_content, is_bold) =
-                    match game.board.get_piece(row, col) {
-                        Some(piece) => {
-                            let color = match piece.color {
-                                PieceColor::White => Color::White,
-                                PieceColor::Black => Color::Red,
-                            };
-                            (
-                                format!(" {} ", piece.display()),
-                                color,
-                                piece.is_king, // Kings are bold
-                            )
+                for col in 0..=game.board.size {
+                    // Draw vertical border
+                    let mut border_highlighted = false;
+                    if col > 0 {
+                        let cell_left = (row, col - 1);
+                        if self.should_highlight_vertical(game, cell_left) {
+                            border_highlighted = true;
                         }
-                        None => {
-                            if (row + col) % 2 == 0 {
-                                ("     ".to_string(), Color::DarkGrey, false)
-                            } else {
-                                (" ░░░ ".to_string(), Color::DarkGrey, false)
-                            }
+                    }
+                    if col < game.board.size {
+                        let cell_right = (row, col);
+                        if self.should_highlight_vertical(game, cell_right) {
+                            border_highlighted = true;
                         }
+                    }
+
+                    let border_color = if border_highlighted {
+                        Color::Red
+                    } else {
+                        Color::DarkGrey
                     };
-
-                stdout.queue(SetForegroundColor(text_color_for_content))?;
-                if is_bold {
-                    stdout.queue(SetAttribute(Attribute::Bold))?;
-                }
-                write!(stdout, "{}", content_to_display)?;
-                if is_bold {
-                    stdout.queue(SetAttribute(Attribute::Reset))?;
-                }
-                stdout.queue(ResetColor)?;
-
-                // Don't draw right border for the last cell to avoid double lines
-                if col < game.board.size - 1 {
-                    stdout.queue(SetForegroundColor(cell_border_color))?;
-                    write!(stdout, "|")?;
+                    stdout.queue(SetForegroundColor(border_color))?;
+                    write!(stdout, "{}", if border_highlighted { "┃" } else { "│" })?;
                     stdout.queue(ResetColor)?;
-                }
-            }
-            // Add final right border
-            let last_cell_border_color =
-                self.get_cell_border_style(game, (row, game.board.size - 1));
-            stdout.queue(SetForegroundColor(last_cell_border_color))?;
-            write!(stdout, "|")?;
-            stdout.queue(ResetColor)?;
-            stdout.write_all(b"\n\r")?;
 
-            // Bottom border of cells
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
+                    // Draw cell content (if not the last border)
+                    if col < game.board.size {
+                        let (content_to_display, text_color_for_content, is_bold) =
+                            match game.board.get_piece(row, col) {
+                                Some(piece) => {
+                                    let color = match piece.color {
+                                        PieceColor::White => Color::White,
+                                        PieceColor::Black => Color::Red,
+                                    };
+                                    (format!(" {} ", piece.display()), color, piece.is_king)
+                                }
+                                None => {
+                                    if (row + col) % 2 == 0 {
+                                        ("     ".to_string(), Color::DarkGrey, false)
+                                    } else {
+                                        (" ░░░ ".to_string(), Color::DarkGrey, false)
+                                    }
+                                }
+                            };
+
+                        stdout.queue(SetForegroundColor(text_color_for_content))?;
+                        if is_bold {
+                            stdout.queue(SetAttribute(Attribute::Bold))?;
+                        }
+                        write!(stdout, "{}", content_to_display)?;
+                        if is_bold {
+                            stdout.queue(SetAttribute(Attribute::Reset))?;
+                        }
+                        stdout.queue(ResetColor)?;
+                    }
+                }
+                stdout.write_all(b"\n\r")?;
             }
-            stdout.write_all(b"   ")?;
-            for col in 0..game.board.size {
-                let cell_border_color = self.get_cell_border_style(game, (row, col));
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                stdout.write_all(b"+-----+")?;
-                stdout.queue(ResetColor)?;
-            }
-            stdout.write_all(b"\n\r")?;
         }
+
         Ok(())
     }
 
@@ -215,24 +265,7 @@ impl UI {
         // Removed AI thinking message due to rendering issues
         stdout.write_all(b"\n\r")?;
 
-        // Game over message
-        if game.is_game_over {
-            stdout.write_all(b"\n\r")?;
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.queue(SetForegroundColor(Color::Yellow))?;
-            stdout.queue(SetAttribute(Attribute::Bold))?;
-            if let Some(winner) = game.check_winner() {
-                write!(stdout, "🏆 GAME OVER! {:?} WINS! 🏆", winner)?;
-                stdout.write_all(b"\n\r")?;
-            } else if game.is_stalemate() {
-                write!(stdout, "🤝 GAME OVER! STALEMATE! 🤝")?;
-                stdout.write_all(b"\n\r")?;
-            }
-            stdout.queue(SetAttribute(Attribute::Reset))?;
-            stdout.queue(ResetColor)?;
-        }
+        // Don't show game over message here - it will be shown after the board
 
         Ok(())
     }
@@ -263,6 +296,48 @@ impl UI {
         Ok(())
     }
 
+    fn render_game_over(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
+        if game.is_game_over {
+            let offset = get_centering_offset();
+
+            stdout.write_all(b"\n\r")?;
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+            write!(
+                stdout,
+                "═══════════════════════════════════════════════════════════"
+            )?;
+            stdout.queue(ResetColor)?;
+            stdout.write_all(b"\n\r")?;
+
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::Yellow))?;
+            stdout.queue(SetAttribute(Attribute::Bold))?;
+            if let Some(winner) = game.check_winner() {
+                write!(stdout, "🏆 GAME OVER! {:?} WINS! 🏆", winner)?;
+            } else if game.is_stalemate() {
+                write!(stdout, "🤝 GAME OVER! STALEMATE! 🤝")?;
+            }
+            stdout.queue(SetAttribute(Attribute::Reset))?;
+            stdout.queue(ResetColor)?;
+
+            stdout.write_all(b"\n\r")?;
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::Grey))?;
+            write!(stdout, "Press any key to exit...")?;
+            stdout.queue(ResetColor)?;
+            stdout.write_all(b"\n\r")?;
+        }
+
+        Ok(())
+    }
+
     pub fn render_game(&mut self, game: &CheckersGame) -> io::Result<()> {
         let mut stdout = stdout();
 
@@ -280,7 +355,14 @@ impl UI {
         stdout.write_all(b"\n\r")?;
         Self::render_column_headers(&mut stdout, game.board.size)?;
         self.render_board_rows(&mut stdout, game)?;
-        self.render_controls(&mut stdout)?;
+
+        // Show controls only if game is not over
+        if !game.is_game_over {
+            self.render_controls(&mut stdout)?;
+        }
+
+        // Show game over message after the board
+        self.render_game_over(&mut stdout, game)?;
 
         // Clear any remaining lines after the content
         stdout.queue(Clear(ClearType::FromCursorDown))?;

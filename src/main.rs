@@ -25,6 +25,9 @@ fn cleanup_terminal() -> io::Result<()> {
     stdout.execute(Show)?;
     stdout.execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
+    // Clear the main screen after leaving alternate screen
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(cursor::MoveTo(0, 0))?;
     Ok(())
 }
 
@@ -70,6 +73,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .expect("Error setting Ctrl-C handler");
 
     let mut stdout = stdout();
+    // Clear the welcome screen before entering alternate screen
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(cursor::MoveTo(0, 0))?;
     terminal::enable_raw_mode()?;
     stdout.execute(EnterAlternateScreen)?;
 
@@ -114,13 +120,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 needs_render = true;
                             }
                             Some(_) => {
-                                let move_result = game.make_move(row, col);
-                                if let Err(_e) = move_result {
-                                    // Error will be visible in UI
+                                // Check if the selected cell is in possible moves
+                                if let Some(possible_moves) = &game.possible_moves {
+                                    if !possible_moves.contains(&(row, col)) {
+                                        // Only clear selection if NOT in a multi-capture sequence
+                                        if !game.is_in_multi_capture() {
+                                            game.selected_piece = None;
+                                            game.possible_moves = None;
+                                        }
+                                        needs_render = true;
+                                    } else {
+                                        // Attempt the move
+                                        let move_result = game.make_move(row, col);
+                                        if let Err(_e) = move_result {
+                                            // Error will be visible in UI
+                                        } else {
+                                            check_and_set_game_over(&mut game);
+                                        }
+                                        needs_render = true;
+                                    }
                                 } else {
-                                    check_and_set_game_over(&mut game);
+                                    // No possible moves, clear selection
+                                    game.selected_piece = None;
+                                    needs_render = true;
                                 }
-                                needs_render = true;
                             }
                         }
                     }
@@ -165,14 +188,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if game.is_game_over {
             ui.render_game(&game)?;
+            // Wait for any key press before exiting
+            loop {
+                if input::read_input()?.is_some() {
+                    break;
+                }
+            }
             break;
         }
     }
 
-    // Clear screen before exiting
-    io::stdout().execute(Clear(ClearType::All))?;
-    io::stdout().execute(cursor::MoveTo(0, 0))?;
-
+    // Cleanup and exit
     cleanup_terminal()?;
     Ok(())
 }
