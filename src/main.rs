@@ -1,7 +1,6 @@
 mod ai;
 mod core;
 mod interface;
-mod utils;
 
 use crossterm::{
     cursor::MoveTo,
@@ -19,7 +18,7 @@ use crate::interface::input;
 use crate::interface::input::{CursorDirection, GameInput};
 use crate::interface::messages;
 use crate::interface::ui::UI;
-use crate::utils::markdown::parser::MarkdownRenderer;
+use crate::interface::welcome_screen::display_welcome_screen;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -28,19 +27,13 @@ fn cleanup_terminal() -> io::Result<()> {
     Ok(())
 }
 
-fn format_model_output(message: &str) -> std::io::Result<String> {
-    let mut renderer = MarkdownRenderer::new();
-    renderer.render(message)
-}
-
 fn display_game_message(stdout: &mut io::Stdout, y_pos: u16, message: &str) -> io::Result<()> {
     stdout.queue(MoveTo(0, y_pos))?;
     let terminal_width = terminal::size().map(|(cols, _)| cols).unwrap_or(80);
     write!(stdout, "{:<width$}", "", width = terminal_width as usize)?;
     stdout.queue(MoveTo(0, y_pos))?;
 
-    let formatted_message = format_model_output(message)?;
-    writeln!(stdout, "{}", formatted_message)?;
+    writeln!(stdout, "{}", message)?;
     stdout.flush()?;
     Ok(())
 }
@@ -58,18 +51,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     const MSG_Y_OFFSET_AI_STATUS: u16 = 4;
 
     let welcome_message = match explain_rules().await {
-        Ok(rules) => format!("# Welcome to Checkers!\n\n{}", rules),
-        Err(AIError::NoApiKey) => String::from(messages::WELCOME_MESSAGE_NO_API),
+        Ok(rules) => rules,
+        Err(AIError::NoApiKey) => {
+            eprintln!("Note: Add GEMINI_API_KEY to your .env file to enable AI-powered content.");
+            String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
+        }
         Err(e) => {
-            eprintln!("Failed to get checkers story from AI: {}", e);
-            String::from(messages::WELCOME_MESSAGE_ERROR)
+            eprintln!("Failed to get checkers content from AI: {}", e);
+            String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
         }
     };
 
-    let formatted_message = format_model_output(&welcome_message)?;
-
-    write!(io::stdout(), "{}\n\n", formatted_message)?;
-    io::stdout().flush()?;
+    display_welcome_screen(&welcome_message)?;
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
