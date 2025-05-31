@@ -9,9 +9,12 @@ Generate exactly three sections in English, each random but strictly about check
 
 Guidelines:
 - All content must be strictly about checkers.
-- The “Did You Know?” section should provide an interesting fact about checkers.
-- The “Tip of the Day” section should provide a brief tip or strategy related to checkers.
-- The “Challenge” section must offer a challenge or reflection prompt related to checkers.
+- The "Did You Know?" section should provide an interesting fact about checkers.
+- The "Tip of the Day" section should provide a brief tip or strategy related to checkers.
+- The "Challenge" section must offer a challenge or reflection prompt related to checkers.
+- DO NOT use any HTML tags like <br>, <p>, <div>, etc. Use only plain text and Markdown formatting.
+- For line breaks, use standard newlines only.
+- Keep each section concise and under 250 characters per line.
 
 No additional text beyond these three sections are allowed, separate them with an empty line only.
 

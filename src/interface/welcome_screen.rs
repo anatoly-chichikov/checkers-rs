@@ -1,10 +1,12 @@
 use crossterm::{
-    cursor,
+    cursor::{self, Hide},
     style::{Color, ResetColor, SetForegroundColor},
     terminal::{self, Clear, ClearType},
     ExecutableCommand, QueueableCommand,
 };
 use std::io::{self, stdout, Write};
+
+use crate::interface::input::{read_input, GameInput};
 
 fn clean_section_text(text: &str) -> &str {
     let mut result = text.trim();
@@ -165,11 +167,24 @@ fn print_challenge_section(stdout: &mut io::Stdout, text: &str) -> io::Result<()
     Ok(())
 }
 
-pub fn display_welcome_screen(message: &str) -> io::Result<()> {
+pub fn wait_for_input() -> io::Result<bool> {
+    loop {
+        if let Some(input) = read_input()? {
+            match input {
+                GameInput::Select => return Ok(true), // Enter was pressed
+                GameInput::Quit => return Ok(false),  // Q/Esc was pressed
+                _ => {}                               // Ignore cursor movements
+            }
+        }
+    }
+}
+
+pub fn display_welcome_screen(message: &str) -> io::Result<bool> {
     let mut stdout = stdout();
 
     stdout.execute(Clear(ClearType::All))?;
     stdout.execute(cursor::MoveTo(0, 0))?;
+    stdout.execute(Hide)?;
 
     print_ascii_art_header(&mut stdout)?;
 
@@ -193,11 +208,17 @@ pub fn display_welcome_screen(message: &str) -> io::Result<()> {
     print_challenge_section(&mut stdout, challenge)?;
 
     stdout.queue(SetForegroundColor(Color::DarkGrey))?;
-    print_centered_line(&mut stdout, "Press ENTER to begin...", 65)?;
+    print_centered_line(&mut stdout, "Press ENTER to begin or Q/ESC to quit...", 65)?;
     stdout.queue(ResetColor)?;
 
     stdout.flush()?;
-    Ok(())
+
+    // Enable raw mode to capture key presses without echo
+    terminal::enable_raw_mode()?;
+    let result = wait_for_input();
+    terminal::disable_raw_mode()?;
+
+    result
 }
 
 #[cfg(test)]

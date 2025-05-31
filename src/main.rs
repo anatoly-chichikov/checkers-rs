@@ -3,7 +3,8 @@ mod core;
 mod interface;
 
 use crossterm::{
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    cursor::{self, Show},
+    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 use std::io::{self, stdout};
@@ -21,6 +22,7 @@ use std::env;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
+    stdout.execute(Show)?;
     stdout.execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
     Ok(())
@@ -46,10 +48,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    display_welcome_screen(&welcome_message)?;
+    let should_continue = display_welcome_screen(&welcome_message)?;
 
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    // Show cursor after welcome screen
+    stdout().execute(Show)?;
+
+    if !should_continue {
+        // Clear the screen before exiting
+        let mut stdout = stdout();
+        stdout.execute(Clear(ClearType::All))?;
+        stdout.execute(cursor::MoveTo(0, 0))?;
+        cleanup_terminal()?;
+        return Ok(());
+    }
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -118,6 +129,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Reset flag before checking for AI turn
+        game.ai_thinking = false;
+
         // AI mode: Black is controlled by AI
         if ai_enabled && game.current_player == PieceColor::Black && !game.is_game_over {
             game.ai_thinking = true;
@@ -145,6 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     game.switch_player();
                 }
             }
+            game.ai_thinking = false; // Ensure flag is reset after AI move
             needs_render = true;
         }
 
@@ -153,6 +168,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
     }
+
+    // Clear screen before exiting
+    io::stdout().execute(Clear(ClearType::All))?;
+    io::stdout().execute(cursor::MoveTo(0, 0))?;
 
     cleanup_terminal()?;
     Ok(())
