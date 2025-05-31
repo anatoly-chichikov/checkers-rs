@@ -22,7 +22,16 @@ cargo test -- --nocapture        # Run tests with stdout output
 **Linting & Formatting:**
 ```bash
 cargo fmt                        # Format code
-cargo clippy                     # Run linter
+cargo clippy -- -D warnings      # Run linter (fail on warnings)
+```
+
+## Pre-commit Checklist
+
+Before committing changes, always run:
+```bash
+cargo fmt                        # Format code
+cargo clippy -- -D warnings      # Check for linting issues
+cargo test                       # Run all tests
 ```
 
 ## Architecture Overview
