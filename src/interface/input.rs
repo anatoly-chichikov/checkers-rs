@@ -25,7 +25,13 @@ pub fn read_input() -> io::Result<Option<GameInput>> {
                 KeyCode::Left => GameInput::MoveCursor(CursorDirection::Left),
                 KeyCode::Right => GameInput::MoveCursor(CursorDirection::Right),
                 KeyCode::Char(' ') | KeyCode::Enter => GameInput::Select,
-                KeyCode::Char('q') | KeyCode::Esc => GameInput::Quit,
+                KeyCode::Char('q') | KeyCode::Char('Q') | 
+                KeyCode::Char('й') | KeyCode::Char('Й') |
+                KeyCode::Char('a') | KeyCode::Char('A') |
+                KeyCode::Char('ק') |
+                KeyCode::Char('ض') |
+                KeyCode::Char('θ') | KeyCode::Char('Θ') |
+                KeyCode::Esc => GameInput::Quit,
                 _ => return Ok(None),
             }));
         }
