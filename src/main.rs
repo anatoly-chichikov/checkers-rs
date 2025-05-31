@@ -19,6 +19,7 @@ use crate::interface::input::{CursorDirection, GameInput};
 use crate::interface::messages;
 use crate::interface::ui::UI;
 use crate::interface::welcome_screen::display_welcome_screen;
+use std::env;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -82,6 +83,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut ui = UI::new();
     let mut needs_render = true;
 
+    // Check if AI mode is available
+    let ai_enabled = env::var("GEMINI_API_KEY").is_ok();
+
+    if !ai_enabled {
+        display_game_message(
+            &mut stdout,
+            board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
+            "Two-player mode: Red and Black players take turns",
+        )?;
+    }
+
     while running.load(Ordering::SeqCst) {
         if needs_render {
             ui.render_game(&game)?;
@@ -139,7 +151,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if game.current_player == PieceColor::Black && !game.is_game_over {
+        // AI mode: Black is controlled by AI
+        if ai_enabled && game.current_player == PieceColor::Black && !game.is_game_over {
             display_game_message(
                 &mut stdout,
                 board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
