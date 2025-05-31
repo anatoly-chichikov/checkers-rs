@@ -186,7 +186,7 @@ impl UI {
                     }
 
                     let border_color = if border_highlighted {
-                        Color::Blue
+                        Color::Red
                     } else {
                         Color::DarkGrey
                     };
