@@ -2,13 +2,13 @@ use reqwest::Client;
 use std::env;
 
 use crate::ai::error::AIError;
-use crate::ai::models::{Content, GeminiRequest, GeminiResponse, Part, GenerationConfig};
+use crate::ai::models::{Content, GeminiRequest, GeminiResponse, GenerationConfig, Part};
 use crate::ai::ui::{start_loading_animation, stop_loading_animation};
-use crate::interface::messages;
-use crate::core::game::CheckersGame;
 use crate::core::board::Board;
-use crate::core::piece::Color as PieceColor;
+use crate::core::game::CheckersGame;
 use crate::core::game_logic::get_all_valid_moves_for_player;
+use crate::core::piece::Color as PieceColor;
+use crate::interface::messages;
 
 fn format_square(row: usize, col: usize) -> String {
     format!("{}{}", (col as u8 + b'A') as char, row + 1)
@@ -69,8 +69,14 @@ pub async fn explain_rules() -> Result<String, AIError> {
 
     let status = response.status();
     if !status.is_success() {
-        let error_body = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!("API request failed with status {}: {}", status, error_body)));
+        let error_body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(AIError::RequestFailed(format!(
+            "API request failed with status {}: {}",
+            status, error_body
+        )));
     }
 
     let response_data: GeminiResponse = response
@@ -82,16 +88,16 @@ pub async fn explain_rules() -> Result<String, AIError> {
         if let Some(part) = candidate.content.parts.first() {
             Ok(part.text.clone())
         } else {
-            Err(AIError::ParseError("No parts in candidate content".to_string()))
+            Err(AIError::ParseError(
+                "No parts in candidate content".to_string(),
+            ))
         }
     } else {
         Err(AIError::ParseError("No candidates in response".to_string()))
     }
-} 
+}
 
-pub async fn get_ai_move(
-    game: &CheckersGame,
-) -> Result<((usize, usize), (usize, usize)), AIError> {
+pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize, usize)), AIError> {
     dotenv::dotenv().ok();
     let api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
 
@@ -108,7 +114,9 @@ pub async fn get_ai_move(
 
     let board_representation = format_board(&game.board);
     let mut moves_str = String::new();
-    for (i, ((from_row, from_col), (to_row, to_col), is_capture)) in possible_moves.iter().enumerate() {
+    for (i, ((from_row, from_col), (to_row, to_col), is_capture)) in
+        possible_moves.iter().enumerate()
+    {
         let formatted_from_sq = format_square(*from_row, *from_col);
         let formatted_to_sq = format_square(*to_row, *to_col);
         let mut move_desc = format!("{}. {} to {}", i + 1, formatted_from_sq, formatted_to_sq);
@@ -120,7 +128,7 @@ pub async fn get_ai_move(
             move_desc.push_str(&format!(" (captures piece at {})", formatted_captured_sq));
         }
         moves_str.push_str(&move_desc);
-        moves_str.push_str("\n");
+        moves_str.push('\n');
     }
 
     let prompt = format!(
@@ -160,8 +168,14 @@ pub async fn get_ai_move(
 
     let status = response.status();
     if !status.is_success() {
-        let error_body = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!("API request failed with status {}: {}", status, error_body)));
+        let error_body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(AIError::RequestFailed(format!(
+            "API request failed with status {}: {}",
+            status, error_body
+        )));
     }
 
     let response_data: GeminiResponse = response
@@ -172,7 +186,10 @@ pub async fn get_ai_move(
     if let Some(candidate) = response_data.candidates.first() {
         if let Some(part) = candidate.content.parts.first() {
             let text_response = part.text.trim();
-            let cleaned_response = text_response.chars().filter(|c| c.is_digit(10)).collect::<String>();
+            let cleaned_response = text_response
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .collect::<String>();
             match cleaned_response.parse::<usize>() {
                 Ok(move_number) if move_number > 0 && move_number <= possible_moves.len() => {
                     let chosen_move_data = &possible_moves[move_number - 1];
@@ -186,12 +203,13 @@ pub async fn get_ai_move(
                 ))),
                 Err(_) => Err(AIError::InvalidResponseFormat(format!(
                     "AI returned non-numeric or invalid response: '{}'. Cleaned: '{}'",
-                    text_response,
-                    cleaned_response
+                    text_response, cleaned_response
                 ))),
             }
         } else {
-            Err(AIError::ParseError("No parts in candidate content".to_string()))
+            Err(AIError::ParseError(
+                "No parts in candidate content".to_string(),
+            ))
         }
     } else {
         Err(AIError::ParseError("No candidates in response".to_string()))

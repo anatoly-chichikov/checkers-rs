@@ -41,7 +41,11 @@ impl UI {
             Color::Yellow
         } else if game.selected_piece == Some(cell_pos) {
             Color::Green
-        } else if game.possible_moves.as_ref().map_or(false, |m| m.contains(&cell_pos)) {
+        } else if game
+            .possible_moves
+            .as_ref()
+            .is_some_and(|m| m.contains(&cell_pos))
+        {
             Color::Cyan
         } else {
             Color::DarkGrey
@@ -92,7 +96,7 @@ impl UI {
                             } else {
                                 (" ░░░ ".to_string(), Color::DarkGrey)
                             }
-                        },
+                        }
                     };
 
                 stdout.queue(SetForegroundColor(cell_border_color))?;
@@ -133,11 +137,7 @@ impl UI {
 
         if let Some(selected) = game.selected_piece {
             stdout.queue(SetForegroundColor(Color::Green))?;
-            writeln!(
-                stdout,
-                "Selected piece at: {}",
-                format_position(selected)
-            )?;
+            writeln!(stdout, "Selected piece at: {}", format_position(selected))?;
             stdout.queue(ResetColor)?;
         }
 
@@ -152,12 +152,15 @@ impl UI {
                 stdout.queue(ResetColor)?;
             }
         }
-        
+
         stdout.write_all(b"\n\r")?;
         stdout.queue(SetForegroundColor(Color::DarkGrey))?;
-        writeln!(stdout, "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit")?;
+        writeln!(
+            stdout,
+            "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit"
+        )?;
         stdout.queue(ResetColor)?;
-        
+
         Ok(())
     }
 

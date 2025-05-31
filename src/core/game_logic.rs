@@ -1,6 +1,9 @@
 use crate::core::board::Board;
 use crate::core::piece::{Color, Piece};
 
+/// Type alias for a move with its origin position, destination position, and whether it's a capture
+pub type Move = ((usize, usize), (usize, usize), bool);
+
 pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
     match piece.color {
         Color::White => row == 0,
@@ -8,12 +11,9 @@ pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
     }
 }
 
-pub fn get_all_valid_moves_for_player(
-    board: &Board,
-    player_color: Color,
-) -> Vec<((usize, usize), (usize, usize), bool)> {
-    let mut capture_moves: Vec<((usize, usize), (usize, usize), bool)> = Vec::new();
-    let mut regular_moves: Vec<((usize, usize), (usize, usize), bool)> = Vec::new();
+pub fn get_all_valid_moves_for_player(board: &Board, player_color: Color) -> Vec<Move> {
+    let mut capture_moves: Vec<Move> = Vec::new();
+    let mut regular_moves: Vec<Move> = Vec::new();
 
     for r in 0..board.size {
         for c in 0..board.size {
@@ -26,10 +26,10 @@ pub fn get_all_valid_moves_for_player(
 
                         if is_capture && is_col_capture_distance {
                             capture_moves.push(((r, c), (to_r, to_c), true));
-                        } else {
-                            if (to_r as i32 - r as i32).abs() == 1 && (to_c as i32 - c as i32).abs() == 1 {
-                                regular_moves.push(((r, c), (to_r, to_c), false));
-                            }
+                        } else if (to_r as i32 - r as i32).abs() == 1
+                            && (to_c as i32 - c as i32).abs() == 1
+                        {
+                            regular_moves.push(((r, c), (to_r, to_c), false));
                         }
                     }
                 }
@@ -67,8 +67,11 @@ fn find_capture_moves_recursive(
         let to_row_i32 = current_row as i32 + row_offset;
         let to_col_i32 = current_col as i32 + col_offset;
 
-        if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
-           to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
+        if to_row_i32 < 0
+            || to_row_i32 >= board.size as i32
+            || to_col_i32 < 0
+            || to_col_i32 >= board.size as i32
+        {
             continue;
         }
         let to_row = to_row_i32 as usize;
@@ -97,7 +100,14 @@ fn find_capture_moves_recursive(
                         next_path.push((to_row, to_col));
                         found_next_capture = true;
 
-                        find_capture_moves_recursive(&new_board, to_row, to_col, piece, next_path, all_capture_paths);
+                        find_capture_moves_recursive(
+                            &new_board,
+                            to_row,
+                            to_col,
+                            piece,
+                            next_path,
+                            all_capture_paths,
+                        );
                     }
                 }
             }
@@ -115,20 +125,27 @@ pub fn get_all_possible_moves(
     piece_col: usize,
 ) -> Vec<(usize, usize)> {
     let piece = match board.get_piece(piece_row, piece_col) {
-        Some(p) => p.clone(),
+        Some(p) => p,
         None => return vec![],
     };
 
     let mut all_capture_final_positions: Vec<(usize, usize)> = Vec::new();
     let mut capture_paths: Vec<Vec<(usize, usize)>> = Vec::new();
 
-    find_capture_moves_recursive(board, piece_row, piece_col, &piece, Vec::new(), &mut capture_paths);
+    find_capture_moves_recursive(
+        board,
+        piece_row,
+        piece_col,
+        &piece,
+        Vec::new(),
+        &mut capture_paths,
+    );
 
     if !capture_paths.is_empty() {
         for path in capture_paths {
             if let Some(last_pos) = path.last() {
                 if !all_capture_final_positions.contains(last_pos) {
-                     all_capture_final_positions.push(*last_pos);
+                    all_capture_final_positions.push(*last_pos);
                 }
             }
         }
@@ -149,8 +166,11 @@ pub fn get_all_possible_moves(
         let to_row_i32 = piece_row as i32 + row_offset;
         let to_col_i32 = piece_col as i32 + col_offset;
 
-        if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
-           to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
+        if to_row_i32 < 0
+            || to_row_i32 >= board.size as i32
+            || to_col_i32 < 0
+            || to_col_i32 >= board.size as i32
+        {
             continue;
         }
         let to_row = to_row_i32 as usize;
@@ -172,13 +192,19 @@ pub fn is_valid_move(
     to_col: usize,
     piece: &Piece,
 ) -> bool {
-    if !board.in_bounds(to_row, to_col) { return false; }
-    if board.get_piece(to_row, to_col).is_some() { return false; }
+    if !board.in_bounds(to_row, to_col) {
+        return false;
+    }
+    if board.get_piece(to_row, to_col).is_some() {
+        return false;
+    }
 
     let row_diff = to_row as i32 - from_row as i32;
     let col_diff = to_col as i32 - from_col as i32;
 
-    if col_diff.abs() != row_diff.abs() { return false; }
+    if col_diff.abs() != row_diff.abs() {
+        return false;
+    }
 
     if piece.is_king {
         if row_diff.abs() == 2 {
@@ -235,19 +261,25 @@ pub fn can_piece_capture(board: &Board, piece_row: usize, piece_col: usize) -> b
             let to_row_i32 = piece_row as i32 + row_offset;
             let to_col_i32 = piece_col as i32 + col_offset;
 
-            if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
-               to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
+            if to_row_i32 < 0
+                || to_row_i32 >= board.size as i32
+                || to_col_i32 < 0
+                || to_col_i32 >= board.size as i32
+            {
                 continue;
             }
             let to_row = to_row_i32 as usize;
             let to_col = to_col_i32 as usize;
-            
+
             let mid_row = (piece_row as i32 + to_row_i32) / 2;
             let mid_col = (piece_col as i32 + to_col_i32) / 2;
-            
-            if mid_row < 0 || mid_row >= board.size as i32 || 
-               mid_col < 0 || mid_col >= board.size as i32 {
-                continue; 
+
+            if mid_row < 0
+                || mid_row >= board.size as i32
+                || mid_col < 0
+                || mid_col >= board.size as i32
+            {
+                continue;
             }
             let mid_row_usize = mid_row as usize;
             let mid_col_usize = mid_col as usize;

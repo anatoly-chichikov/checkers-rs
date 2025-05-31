@@ -15,4 +15,4 @@ pub enum AIError {
     NoPossibleMoves,
     #[error("IO error: {0}")]
     IOError(#[from] io::Error),
-} 
+}

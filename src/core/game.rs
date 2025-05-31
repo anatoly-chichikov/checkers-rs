@@ -57,10 +57,8 @@ impl CheckersGame {
 
         match self.board.get_piece(row, col) {
             Some(piece) if piece.color == self.current_player => {
-                if self.has_captures_available() {
-                    if !can_piece_capture(&self.board, row, col) {
-                        return Err(GameError::ForcedCaptureAvailable);
-                    }
+                if self.has_captures_available() && !can_piece_capture(&self.board, row, col) {
+                    return Err(GameError::ForcedCaptureAvailable);
                 }
                 self.selected_piece = Some((row, col));
                 self.possible_moves = Some(get_all_possible_moves(&self.board, row, col));
@@ -111,7 +109,8 @@ impl CheckersGame {
             }
         }
 
-        if row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col) {
+        if row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col)
+        {
             self.selected_piece = Some((to_row, to_col));
             self.possible_moves = Some(get_all_possible_moves(&self.board, to_row, to_col));
             return Ok(());
