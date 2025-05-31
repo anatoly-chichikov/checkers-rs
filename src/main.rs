@@ -25,6 +25,9 @@ fn cleanup_terminal() -> io::Result<()> {
     stdout.execute(Show)?;
     stdout.execute(LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
+    // Clear the main screen after leaving alternate screen
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(cursor::MoveTo(0, 0))?;
     Ok(())
 }
 
@@ -70,6 +73,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .expect("Error setting Ctrl-C handler");
 
     let mut stdout = stdout();
+    // Clear the welcome screen before entering alternate screen
+    stdout.execute(Clear(ClearType::All))?;
+    stdout.execute(cursor::MoveTo(0, 0))?;
     terminal::enable_raw_mode()?;
     stdout.execute(EnterAlternateScreen)?;
 
@@ -182,14 +188,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if game.is_game_over {
             ui.render_game(&game)?;
+            // Wait for any key press before exiting
+            loop {
+                if input::read_input()?.is_some() {
+                    break;
+                }
+            }
             break;
         }
     }
 
-    // Clear screen before exiting
-    io::stdout().execute(Clear(ClearType::All))?;
-    io::stdout().execute(cursor::MoveTo(0, 0))?;
-
+    // Cleanup and exit
     cleanup_terminal()?;
     Ok(())
 }

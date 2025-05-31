@@ -265,24 +265,7 @@ impl UI {
         // Removed AI thinking message due to rendering issues
         stdout.write_all(b"\n\r")?;
 
-        // Game over message
-        if game.is_game_over {
-            stdout.write_all(b"\n\r")?;
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.queue(SetForegroundColor(Color::Yellow))?;
-            stdout.queue(SetAttribute(Attribute::Bold))?;
-            if let Some(winner) = game.check_winner() {
-                write!(stdout, "🏆 GAME OVER! {:?} WINS! 🏆", winner)?;
-                stdout.write_all(b"\n\r")?;
-            } else if game.is_stalemate() {
-                write!(stdout, "🤝 GAME OVER! STALEMATE! 🤝")?;
-                stdout.write_all(b"\n\r")?;
-            }
-            stdout.queue(SetAttribute(Attribute::Reset))?;
-            stdout.queue(ResetColor)?;
-        }
+        // Don't show game over message here - it will be shown after the board
 
         Ok(())
     }
@@ -313,6 +296,48 @@ impl UI {
         Ok(())
     }
 
+    fn render_game_over(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
+        if game.is_game_over {
+            let offset = get_centering_offset();
+
+            stdout.write_all(b"\n\r")?;
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+            write!(
+                stdout,
+                "═══════════════════════════════════════════════════════════"
+            )?;
+            stdout.queue(ResetColor)?;
+            stdout.write_all(b"\n\r")?;
+
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::Yellow))?;
+            stdout.queue(SetAttribute(Attribute::Bold))?;
+            if let Some(winner) = game.check_winner() {
+                write!(stdout, "🏆 GAME OVER! {:?} WINS! 🏆", winner)?;
+            } else if game.is_stalemate() {
+                write!(stdout, "🤝 GAME OVER! STALEMATE! 🤝")?;
+            }
+            stdout.queue(SetAttribute(Attribute::Reset))?;
+            stdout.queue(ResetColor)?;
+
+            stdout.write_all(b"\n\r")?;
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            stdout.queue(SetForegroundColor(Color::Grey))?;
+            write!(stdout, "Press any key to exit...")?;
+            stdout.queue(ResetColor)?;
+            stdout.write_all(b"\n\r")?;
+        }
+
+        Ok(())
+    }
+
     pub fn render_game(&mut self, game: &CheckersGame) -> io::Result<()> {
         let mut stdout = stdout();
 
@@ -330,7 +355,14 @@ impl UI {
         stdout.write_all(b"\n\r")?;
         Self::render_column_headers(&mut stdout, game.board.size)?;
         self.render_board_rows(&mut stdout, game)?;
-        self.render_controls(&mut stdout)?;
+
+        // Show controls only if game is not over
+        if !game.is_game_over {
+            self.render_controls(&mut stdout)?;
+        }
+
+        // Show game over message after the board
+        self.render_game_over(&mut stdout, game)?;
 
         // Clear any remaining lines after the content
         stdout.queue(Clear(ClearType::FromCursorDown))?;
