@@ -205,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if needs_render && game.is_game_over { // Render once more if game ended and needs_render was set
             ui.render_game(&game)?; // Render the final game state
-            needs_render = false; // Avoid re-rendering if loop somehow continued
+            // needs_render = false; // Redundant: loop breaks immediately after.
             break; // Exit loop as game is over
         }
     }
