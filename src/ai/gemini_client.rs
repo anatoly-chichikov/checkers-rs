@@ -86,7 +86,13 @@ pub async fn explain_rules() -> Result<String, AIError> {
 
     if let Some(candidate) = response_data.candidates.first() {
         if let Some(part) = candidate.content.parts.first() {
-            Ok(part.text.clone())
+            // Remove HTML tags from the response
+            let cleaned_text = part
+                .text
+                .replace("<br>", "\n")
+                .replace("<br/>", "\n")
+                .replace("<br />", "\n");
+            Ok(cleaned_text)
         } else {
             Err(AIError::ParseError(
                 "No parts in candidate content".to_string(),

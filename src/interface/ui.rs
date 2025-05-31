@@ -1,6 +1,6 @@
 use crossterm::{
-    cursor,
-    style::{Attribute, Color, ResetColor, SetAttribute, SetForegroundColor},
+    cursor::{self, Hide},
+    style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor},
     terminal::{size, Clear, ClearType},
     QueueableCommand,
 };
@@ -11,14 +11,11 @@ use crate::core::piece::Color as PieceColor;
 
 pub struct UI {
     cursor_pos: (usize, usize),
-}
-
-fn format_position(pos: (usize, usize)) -> String {
-    format!("{}{}", (b'A' + pos.1 as u8) as char, pos.0 + 1)
+    first_render: bool,
 }
 
 fn get_board_width() -> usize {
-    // Each cell is 7 chars wide (|-----|) and we have 8 cells
+    // Each cell is 7 chars wide (-------) and we have 8 cells
     // Plus 3 chars for row numbers on the left
     3 + (7 * 8)
 }
@@ -44,7 +41,10 @@ impl Default for UI {
 
 impl UI {
     pub fn new() -> Self {
-        Self { cursor_pos: (0, 0) }
+        Self {
+            cursor_pos: (0, 0),
+            first_render: true,
+        }
     }
 
     pub fn set_cursor(&mut self, row: usize, col: usize) {
@@ -57,21 +57,14 @@ impl UI {
 
     fn get_cell_border_style(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> Color {
         if cell_pos == self.cursor_pos {
-            Color::Yellow
-        } else if game.selected_piece == Some(cell_pos) {
-            Color::Green
-        } else if game
-            .possible_moves
-            .as_ref()
-            .is_some_and(|m| m.contains(&cell_pos))
+            Color::White
+        } else if game.selected_piece == Some(cell_pos)
+            || game
+                .possible_moves
+                .as_ref()
+                .is_some_and(|m| m.contains(&cell_pos))
         {
-            Color::Cyan
-        } else if let Some((from, to)) = game.last_move {
-            if cell_pos == from || cell_pos == to {
-                Color::Magenta
-            } else {
-                Color::DarkGrey
-            }
+            Color::Grey
         } else {
             Color::DarkGrey
         }
@@ -80,11 +73,11 @@ impl UI {
     fn render_column_headers(stdout: &mut io::Stdout, board_size: usize) -> io::Result<()> {
         let offset = get_centering_offset();
         if offset > 0 {
-            write!(stdout, "{}", " ".repeat(offset))?;
+            stdout.queue(Print(" ".repeat(offset)))?;
         }
 
         stdout.queue(SetForegroundColor(Color::Blue))?;
-        stdout.write_all(b"   ")?;
+        stdout.queue(Print("   "))?;
         for col in 0..board_size {
             write!(stdout, "   {}   ", (b'A' + col as u8) as char)?;
         }
@@ -121,6 +114,11 @@ impl UI {
             for col in 0..game.board.size {
                 let cell_border_color = self.get_cell_border_style(game, (row, col));
 
+                // Left border of the cell
+                stdout.queue(SetForegroundColor(cell_border_color))?;
+                write!(stdout, "|")?;
+                stdout.queue(ResetColor)?;
+
                 let (content_to_display, text_color_for_content, is_bold) =
                     match game.board.get_piece(row, col) {
                         Some(piece) => {
@@ -143,10 +141,6 @@ impl UI {
                         }
                     };
 
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                write!(stdout, "|")?;
-                stdout.queue(ResetColor)?;
-
                 stdout.queue(SetForegroundColor(text_color_for_content))?;
                 if is_bold {
                     stdout.queue(SetAttribute(Attribute::Bold))?;
@@ -157,10 +151,19 @@ impl UI {
                 }
                 stdout.queue(ResetColor)?;
 
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                write!(stdout, "|")?;
-                stdout.queue(ResetColor)?;
+                // Don't draw right border for the last cell to avoid double lines
+                if col < game.board.size - 1 {
+                    stdout.queue(SetForegroundColor(cell_border_color))?;
+                    write!(stdout, "|")?;
+                    stdout.queue(ResetColor)?;
+                }
             }
+            // Add final right border
+            let last_cell_border_color =
+                self.get_cell_border_style(game, (row, game.board.size - 1));
+            stdout.queue(SetForegroundColor(last_cell_border_color))?;
+            write!(stdout, "|")?;
+            stdout.queue(ResetColor)?;
             stdout.write_all(b"\n\r")?;
 
             // Bottom border of cells
@@ -181,7 +184,6 @@ impl UI {
 
     fn render_game_status(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         let offset = get_centering_offset();
-        let (white_regular, white_kings, black_regular, black_kings) = game.count_pieces();
 
         // Game status section with divider - removed initial newline
         if offset > 0 {
@@ -207,52 +209,11 @@ impl UI {
         stdout.queue(SetForegroundColor(player_color))?;
         stdout.queue(SetAttribute(Attribute::Bold))?;
         write!(stdout, "{:?}", game.current_player)?;
-        if game.ai_thinking && game.current_player == PieceColor::Black {
-            write!(stdout, " (AI is thinking...)")?;
-        }
         stdout.queue(SetAttribute(Attribute::Reset))?;
         stdout.queue(ResetColor)?;
 
-        // Piece counts
-        write!(stdout, "    |    Pieces: ")?;
-        stdout.queue(SetForegroundColor(Color::White))?;
-        write!(
-            stdout,
-            "White: {} ({}K)",
-            white_regular + white_kings,
-            white_kings
-        )?;
-        stdout.queue(ResetColor)?;
-        write!(stdout, "  ")?;
-        stdout.queue(SetForegroundColor(Color::Red))?;
-        write!(
-            stdout,
-            "Black: {} ({}K)",
-            black_regular + black_kings,
-            black_kings
-        )?;
-        stdout.queue(ResetColor)?;
+        // Removed AI thinking message due to rendering issues
         stdout.write_all(b"\n\r")?;
-
-        // Selected piece info
-        if let Some(selected) = game.selected_piece {
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.queue(SetForegroundColor(Color::Green))?;
-            stdout.queue(SetAttribute(Attribute::Bold))?;
-            write!(stdout, "Selected: {}", format_position(selected))?;
-            stdout.queue(SetAttribute(Attribute::Reset))?;
-            stdout.queue(ResetColor)?;
-
-            if let Some(moves) = &game.possible_moves {
-                write!(stdout, "  →  ")?;
-                stdout.queue(SetForegroundColor(Color::Cyan))?;
-                write!(stdout, "{} possible moves", moves.len())?;
-                stdout.queue(ResetColor)?;
-            }
-            stdout.write_all(b"\n\r")?;
-        }
 
         // Game over message
         if game.is_game_over {
@@ -299,35 +260,20 @@ impl UI {
         )?;
         stdout.write_all(b"\n\r")?;
 
-        // Color legend
-        if offset > 0 {
-            write!(stdout, "{}", " ".repeat(offset))?;
-        }
-        write!(stdout, "Highlights: ")?;
-        stdout.queue(SetForegroundColor(Color::Yellow))?;
-        write!(stdout, "█ Cursor")?;
-        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
-        write!(stdout, " │ ")?;
-        stdout.queue(SetForegroundColor(Color::Green))?;
-        write!(stdout, "█ Selected")?;
-        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
-        write!(stdout, " │ ")?;
-        stdout.queue(SetForegroundColor(Color::Cyan))?;
-        write!(stdout, "█ Possible")?;
-        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
-        write!(stdout, " │ ")?;
-        stdout.queue(SetForegroundColor(Color::Magenta))?;
-        write!(stdout, "█ Last Move")?;
-        stdout.queue(ResetColor)?;
-        stdout.write_all(b"\n\r")?;
-
         Ok(())
     }
 
-    pub fn render_game(&self, game: &CheckersGame) -> io::Result<()> {
+    pub fn render_game(&mut self, game: &CheckersGame) -> io::Result<()> {
         let mut stdout = stdout();
 
-        stdout.queue(Clear(ClearType::All))?;
+        // Queue all operations first to minimize flicker
+        stdout.queue(Hide)?;
+
+        if self.first_render {
+            stdout.queue(Clear(ClearType::All))?;
+            self.first_render = false;
+        }
+
         stdout.queue(cursor::MoveTo(0, 0))?;
 
         self.render_game_status(&mut stdout, game)?;
@@ -335,6 +281,9 @@ impl UI {
         Self::render_column_headers(&mut stdout, game.board.size)?;
         self.render_board_rows(&mut stdout, game)?;
         self.render_controls(&mut stdout)?;
+
+        // Clear any remaining lines after the content
+        stdout.queue(Clear(ClearType::FromCursorDown))?;
 
         stdout.flush()?;
         Ok(())
