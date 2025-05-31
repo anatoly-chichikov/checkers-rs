@@ -49,7 +49,6 @@ impl CheckersGame {
             return Err(GameError::OutOfBounds);
         }
 
-        // If selecting the same piece that's already selected, deselect it
         if self.selected_piece == Some((row, col)) {
             self.selected_piece = None;
             self.possible_moves = None;
@@ -58,7 +57,6 @@ impl CheckersGame {
 
         match self.board.get_piece(row, col) {
             Some(piece) if piece.color == self.current_player => {
-                // Forced capture logic
                 if self.has_captures_available() {
                     if !can_piece_capture(&self.board, row, col) {
                         return Err(GameError::ForcedCaptureAvailable);
@@ -85,7 +83,6 @@ impl CheckersGame {
             .get_piece(from_row, from_col)
             .ok_or(GameError::NoPieceSelected)?;
 
-        // Check if there are any captures available
         if self.has_captures_available() {
             let row_diff = (to_row as i32 - from_row as i32).abs();
             if row_diff != 2 {
@@ -93,24 +90,20 @@ impl CheckersGame {
             }
         }
 
-        // Check if the move is valid
         if !game_logic::is_valid_move(&self.board, from_row, from_col, to_row, to_col, &piece) {
             return Err(GameError::InvalidMove);
         }
 
-        // If it's a capture move, remove the captured piece
-        let row_diff = (to_row as i32 - from_row as i32).abs();
-        if row_diff == 2 {
+        let row_diff_abs = (to_row as i32 - from_row as i32).abs();
+        if row_diff_abs == 2 {
             let mid_row = (from_row + to_row) / 2;
             let mid_col = (from_col + to_col) / 2;
             self.board.set_piece(mid_row, mid_col, None);
         }
 
-        // Move the piece
         self.board
             .move_piece((from_row, from_col), (to_row, to_col));
 
-        // Check for promotion and promote if necessary
         if game_logic::should_promote(&piece, to_row, self.board.size) {
             if let Some(mut promoted_piece) = self.board.get_piece(to_row, to_col) {
                 promoted_piece.promote_to_king();
@@ -118,12 +111,9 @@ impl CheckersGame {
             }
         }
 
-        // After a capture, check if there are more captures available for the same piece
-        if row_diff == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col) {
-            // If more captures are available, update selected piece and its possible moves
+        if row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col) {
             self.selected_piece = Some((to_row, to_col));
             self.possible_moves = Some(get_all_possible_moves(&self.board, to_row, to_col));
-            // Note: Player does not switch here
             return Ok(());
         }
 

@@ -7,7 +7,6 @@ use super::{
     style::StyleWriter,
 };
 
-// Trait for parsing markdown elements
 pub trait ElementParser {
     fn try_parse(
         &self,
@@ -15,7 +14,6 @@ pub trait ElementParser {
     ) -> Option<Box<dyn Element>>;
 }
 
-// Parser for specific element types
 pub struct HeaderParser;
 pub struct ListItemParser;
 pub struct CodeBlockParser;
@@ -31,14 +29,13 @@ impl ElementParser for HeaderParser {
             return None;
         }
 
-        chars.next(); // consume #
+        chars.next();
         let mut level = 1;
         while chars.peek() == Some(&'#') {
             level += 1;
             chars.next();
         }
 
-        // Skip whitespace
         while chars.peek() == Some(&' ') {
             chars.next();
         }
@@ -65,11 +62,11 @@ impl ElementParser for ListItemParser {
             return None;
         }
 
-        chars.next(); // consume -
+        chars.next();
         if chars.peek() != Some(&' ') {
             return None;
         }
-        chars.next(); // consume space
+        chars.next();
 
         let mut text = String::new();
         let mut is_bold = false;
@@ -108,7 +105,7 @@ impl ElementParser for CodeBlockParser {
             return None;
         }
 
-        chars.next(); // consume first `
+        chars.next();
         if chars.peek() == Some(&'`') {
             chars.next();
             if chars.peek() == Some(&'`') {
@@ -152,7 +149,7 @@ impl ElementParser for LinkParser {
             return None;
         }
 
-        chars.next(); // consume [
+        chars.next();
         let mut text = String::new();
         let mut url = String::new();
 
@@ -188,12 +185,12 @@ impl ElementParser for EmphasisParser {
             return None;
         }
 
-        chars.next(); // consume first *
+        chars.next();
         let mut text = String::new();
         let is_bold = chars.peek() == Some(&'*');
 
         if is_bold {
-            chars.next(); // consume second *
+            chars.next();
         }
 
         while let Some(&next) = chars.peek() {
@@ -203,14 +200,14 @@ impl ElementParser for EmphasisParser {
                     if chars.peek() == Some(&'*') {
                         chars.next();
                         if is_bold {
-                            break; // End of bold
+                            break;
                         }
-                        text.push_str("**"); // Preserve nested bold
+                        text.push_str("**");
                     } else {
                         if !is_bold {
-                            break; // End of italic
+                            break;
                         }
-                        text.push('*'); // Preserve nested italic
+                        text.push('*');
                     }
                 }
                 _ => text.push(chars.next().unwrap()),
@@ -254,7 +251,6 @@ impl MarkdownRenderer {
         while let Some(&ch) = chars.peek() {
             let mut handled = false;
 
-            // Try each parser in turn
             for parser in &self.parsers {
                 if let Some(element) = parser.try_parse(&mut chars) {
                     element.render(&mut self.writer)?;
@@ -263,7 +259,6 @@ impl MarkdownRenderer {
                 }
             }
 
-            // If no parser handled it, treat as plain text
             if !handled {
                 chars.next();
                 self.writer.write_plain(&ch.to_string())?;

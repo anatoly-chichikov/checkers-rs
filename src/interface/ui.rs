@@ -13,6 +13,10 @@ pub struct UI {
     cursor_pos: (usize, usize),
 }
 
+fn format_position(pos: (usize, usize)) -> String {
+    format!("{}{}", (b'A' + pos.1 as u8) as char, pos.0 + 1)
+}
+
 impl Default for UI {
     fn default() -> Self {
         Self::new()
@@ -32,141 +36,86 @@ impl UI {
         self.cursor_pos
     }
 
-    pub fn render_game(&self, game: &CheckersGame) -> io::Result<()> {
-        let mut stdout = stdout();
+    fn get_cell_border_style(&self, game: &CheckersGame, cell_pos: (usize, usize)) -> Color {
+        if cell_pos == self.cursor_pos {
+            Color::Yellow
+        } else if game.selected_piece == Some(cell_pos) {
+            Color::Green
+        } else if game.possible_moves.as_ref().map_or(false, |m| m.contains(&cell_pos)) {
+            Color::Cyan
+        } else {
+            Color::DarkGrey
+        }
+    }
 
-        // Clear screen and move cursor to top-left
-        stdout.queue(Clear(ClearType::All))?;
-        stdout.queue(cursor::MoveTo(0, 0))?;
-
-        // Print column headers with blue color
+    fn render_column_headers(stdout: &mut io::Stdout, board_size: usize) -> io::Result<()> {
         stdout.queue(SetForegroundColor(Color::Blue))?;
-        stdout.write_all(b"   ")?; // Extra space for alignment
-        for col in 0..game.board.size {
-            // Adjust for wider cells: "+-----+" is 7 chars wide
+        stdout.write_all(b"   ")?;
+        for col in 0..board_size {
             write!(stdout, "   {}   ", (b'A' + col as u8) as char)?;
         }
         stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
+        Ok(())
+    }
 
-        // Print board with row numbers
+    fn render_board_rows(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         for row in 0..game.board.size {
-            // Top border of the cell row
-            stdout.write_all(b"   ")?; // Align with row numbers
+            stdout.write_all(b"   ")?;
             for col in 0..game.board.size {
-                let is_cursor_here = (row, col) == self.cursor_pos;
-                let is_selected = game.selected_piece == Some((row, col));
-                let mut is_possible_move = false;
-                if let Some(possible_moves_vec) = &game.possible_moves {
-                    if possible_moves_vec.contains(&(row, col)) {
-                        is_possible_move = true;
-                    }
-                }
-                let cell_border_color = if is_cursor_here {
-                    Color::Yellow
-                } else if is_selected {
-                    Color::Green
-                } else if is_possible_move {
-                    Color::Cyan
-                } else {
-                    Color::DarkGrey
-                };
+                let cell_border_color = self.get_cell_border_style(game, (row, col));
                 stdout.queue(SetForegroundColor(cell_border_color))?;
                 stdout.write_all(b"+-----+")?;
                 stdout.queue(ResetColor)?;
             }
             stdout.write_all(b"\n\r")?;
 
-            // Content line of the cell row
             stdout.queue(SetForegroundColor(Color::Blue))?;
             write!(stdout, "{:2} ", row + 1)?;
             stdout.queue(ResetColor)?;
 
             for col in 0..game.board.size {
-                let is_cursor_here = (row, col) == self.cursor_pos;
-                let is_selected = game.selected_piece == Some((row, col));
-                let mut is_possible_move = false;
-                if let Some(possible_moves_vec) = &game.possible_moves {
-                    if possible_moves_vec.contains(&(row, col)) {
-                        is_possible_move = true;
-                    }
-                }
+                let cell_border_color = self.get_cell_border_style(game, (row, col));
 
-                // Get the piece representation and its color
-                // piece.display() now returns a 3-char String, e.g., "(w)"
-                // For empty cells, we'll use "  _  "
                 let (content_to_display, text_color_for_content) =
                     match game.board.get_piece(row, col) {
-                        Some(piece) => {
-                            let piece_repr = piece.display(); // This is a 3-char String
-                            (
-                                format!(" {} ", piece_repr), // Pad to 5 chars, e.g., " (w) "
-                                match piece.color {
-                                    PieceColor::White => Color::White,
-                                    PieceColor::Black => Color::Red,
-                                },
-                            )
-                        }
-                        None => ("  _  ".to_string(), Color::DarkGrey), // Placeholder is already 5 chars
+                        Some(piece) => (
+                            format!(" {} ", piece.display()),
+                            match piece.color {
+                                PieceColor::White => Color::White,
+                                PieceColor::Black => Color::Red,
+                            },
+                        ),
+                        None => ("  _  ".to_string(), Color::DarkGrey),
                     };
 
-                let cell_bg_color = if is_cursor_here {
-                    Color::Yellow
-                } else if is_selected {
-                    Color::Green
-                } else if is_possible_move {
-                    Color::Cyan
-                } else {
-                    // For default cells, we might not want a specific background for the whole cell,
-                    // but the borders should be distinct. Using DarkGrey for borders of normal cells.
-                    Color::DarkGrey
-                };
-
-                // Draw the left border of the cell
-                stdout.queue(SetForegroundColor(cell_bg_color))?;
+                stdout.queue(SetForegroundColor(cell_border_color))?;
                 write!(stdout, "|")?;
                 stdout.queue(ResetColor)?;
 
-                // Render the 5-character content string (already padded)
                 stdout.queue(SetForegroundColor(text_color_for_content))?;
                 write!(stdout, "{}", content_to_display)?;
                 stdout.queue(ResetColor)?;
 
-                // Draw the right border of the cell
-                stdout.queue(SetForegroundColor(cell_bg_color))?;
+                stdout.queue(SetForegroundColor(cell_border_color))?;
                 write!(stdout, "|")?;
-                stdout.queue(ResetColor)?; // Reset color after cell
+                stdout.queue(ResetColor)?;
             }
             stdout.write_all(b"\n\r")?;
 
-            // Bottom border of the cell row
-            stdout.write_all(b"   ")?; // Align with row numbers
+            stdout.write_all(b"   ")?;
             for col in 0..game.board.size {
-                let is_cursor_here = (row, col) == self.cursor_pos;
-                let is_selected = game.selected_piece == Some((row, col));
-                let mut is_possible_move = false;
-                if let Some(possible_moves_vec) = &game.possible_moves {
-                    if possible_moves_vec.contains(&(row, col)) {
-                        is_possible_move = true;
-                    }
-                }
-                let cell_border_color = if is_cursor_here {
-                    Color::Yellow
-                } else if is_selected {
-                    Color::Green
-                } else if is_possible_move {
-                    Color::Cyan
-                } else {
-                    Color::DarkGrey
-                };
+                let cell_border_color = self.get_cell_border_style(game, (row, col));
                 stdout.queue(SetForegroundColor(cell_border_color))?;
                 stdout.write_all(b"+-----+")?;
                 stdout.queue(ResetColor)?;
             }
             stdout.write_all(b"\n\r")?;
         }
+        Ok(())
+    }
 
-        // Print game status
+    fn render_game_status(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         stdout.write_all(b"\n\rCurrent player: ")?;
         let player_color = match game.current_player {
             PieceColor::White => Color::White,
@@ -181,7 +130,7 @@ impl UI {
             writeln!(
                 stdout,
                 "Selected piece at: {}",
-                Self::format_position(selected)
+                format_position(selected)
             )?;
             stdout.queue(ResetColor)?;
         }
@@ -197,12 +146,20 @@ impl UI {
                 stdout.queue(ResetColor)?;
             }
         }
-
-        stdout.flush()?;
         Ok(())
     }
 
-    fn format_position(pos: (usize, usize)) -> String {
-        format!("{}{}", (b'A' + pos.1 as u8) as char, pos.0 + 1)
+    pub fn render_game(&self, game: &CheckersGame) -> io::Result<()> {
+        let mut stdout = stdout();
+
+        stdout.queue(Clear(ClearType::All))?;
+        stdout.queue(cursor::MoveTo(0, 0))?;
+
+        Self::render_column_headers(&mut stdout, game.board.size)?;
+        self.render_board_rows(&mut stdout, game)?;
+        self.render_game_status(&mut stdout, game)?;
+
+        stdout.flush()?;
+        Ok(())
     }
 }

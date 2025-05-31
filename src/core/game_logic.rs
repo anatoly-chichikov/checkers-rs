@@ -1,7 +1,6 @@
 use crate::core::board::Board;
 use crate::core::piece::{Color, Piece};
 
-// Checks if a piece can be promoted to king based on its position
 pub fn should_promote(piece: &Piece, row: usize, board_size: usize) -> bool {
     match piece.color {
         Color::White => row == 0,
@@ -23,16 +22,11 @@ pub fn get_all_valid_moves_for_player(
                     let possible_destinations = get_all_possible_moves(board, r, c);
                     for (to_r, to_c) in possible_destinations {
                         let is_capture = (to_r as i32 - r as i32).abs() == 2;
-                        // Also ensure column difference is 2 for a capture, to be certain.
-                        // This helps differentiate from potential future non-diagonal moves if rules change.
                         let is_col_capture_distance = (to_c as i32 - c as i32).abs() == 2;
 
                         if is_capture && is_col_capture_distance {
                             capture_moves.push(((r, c), (to_r, to_c), true));
                         } else {
-                            // Only add if it's not a capture-distance move that failed the column check
-                            // or if it's a standard 1-step move.
-                            // A 2-step non-capture move isn't standard in checkers.
                             if (to_r as i32 - r as i32).abs() == 1 && (to_c as i32 - c as i32).abs() == 1 {
                                 regular_moves.push(((r, c), (to_r, to_c), false));
                             }
@@ -44,29 +38,19 @@ pub fn get_all_valid_moves_for_player(
     }
 
     if !capture_moves.is_empty() {
-        // In checkers, if a capture is available, it must be taken.
-        // Further, if multiple jumps are part of a single capture sequence,
-        // get_all_possible_moves (via find_capture_moves_recursive) should return
-        // the final landing spot of such sequences.
-        // The current implementation collects all *final* positions of capture sequences.
-        // We need to ensure that only the final step of each sequence is considered if multi-jumps
-        // are returned as separate steps by get_all_possible_moves.
-        // However, get_all_possible_moves is designed to return only the *final* landing spots
-        // of full capture sequences. So, each entry in capture_moves should represent a complete capture.
         capture_moves
     } else {
         regular_moves
     }
 }
 
-// Helper function to find all capture sequences for a piece
 fn find_capture_moves_recursive(
     board: &Board,
     current_row: usize,
     current_col: usize,
-    piece: &Piece, // Pass the original piece to maintain its properties (king status, color)
-    current_path: Vec<(usize, usize)>, // Stores the sequence of positions in a multi-jump
-    all_capture_paths: &mut Vec<Vec<(usize, usize)>>, // Stores all found capture paths (sequences of positions)
+    piece: &Piece,
+    current_path: Vec<(usize, usize)>,
+    all_capture_paths: &mut Vec<Vec<(usize, usize)>>,
 ) {
     let mut found_next_capture = false;
 
@@ -83,7 +67,6 @@ fn find_capture_moves_recursive(
         let to_row_i32 = current_row as i32 + row_offset;
         let to_col_i32 = current_col as i32 + col_offset;
 
-        // Bounds check for target square
         if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
            to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
             continue;
@@ -91,37 +74,29 @@ fn find_capture_moves_recursive(
         let to_row = to_row_i32 as usize;
         let to_col = to_col_i32 as usize;
 
-        // Calculate midpoint for capture
         let mid_row = ((current_row as i32 + to_row_i32) / 2) as usize;
         let mid_col = ((current_col as i32 + to_col_i32) / 2) as usize;
 
-        // Check if the move is a valid capture
-        if board.get_piece(to_row, to_col).is_none() { // Target square must be empty
+        if board.get_piece(to_row, to_col).is_none() {
             if let Some(mid_piece) = board.get_piece(mid_row, mid_col) {
-                if mid_piece.color != piece.color { // Must capture an opponent's piece
-                    // Check if this jump is valid based on piece type and direction
+                if mid_piece.color != piece.color {
                     let is_capture_valid_for_piece = if piece.is_king {
-                        true // Kings can capture in any diagonal direction
+                        true
                     } else {
-                        // Regular pieces have direction-specific captures
                         match piece.color {
-                            Color::White => to_row_i32 < current_row as i32, // White captures "up"
-                            Color::Black => to_row_i32 > current_row as i32, // Black captures "down"
+                            Color::White => to_row_i32 < current_row as i32,
+                            Color::Black => to_row_i32 > current_row as i32,
                         }
                     };
 
                     if is_capture_valid_for_piece {
-                        let mut new_board = board.clone(); // Create a new board state for this path
-                        new_board.set_piece(mid_row, mid_col, None); // Remove the captured piece
-                        // Temporarily move the piece on the new board to explore further jumps
-                        // The original piece object (with its king status) is carried through.
-                        // We don't actually place it on new_board for this check, as we only need its properties.
+                        let mut new_board = board.clone();
+                        new_board.set_piece(mid_row, mid_col, None);
 
                         let mut next_path = current_path.clone();
                         next_path.push((to_row, to_col));
                         found_next_capture = true;
 
-                        // Recursively check for more captures from the new position
                         find_capture_moves_recursive(&new_board, to_row, to_col, piece, next_path, all_capture_paths);
                     }
                 }
@@ -129,13 +104,10 @@ fn find_capture_moves_recursive(
         }
     }
 
-    // If no further captures were found from this position, this path ends.
-    // If the current_path is not empty (i.e., it's a result of at least one jump), add it.
     if !found_next_capture && !current_path.is_empty() {
         all_capture_paths.push(current_path);
     }
 }
-
 
 pub fn get_all_possible_moves(
     board: &Board,
@@ -143,21 +115,16 @@ pub fn get_all_possible_moves(
     piece_col: usize,
 ) -> Vec<(usize, usize)> {
     let piece = match board.get_piece(piece_row, piece_col) {
-        Some(p) => p.clone(), // Clone the piece to avoid ownership issues
-        None => return vec![], // No piece at the given position
+        Some(p) => p.clone(),
+        None => return vec![],
     };
 
     let mut all_capture_final_positions: Vec<(usize, usize)> = Vec::new();
     let mut capture_paths: Vec<Vec<(usize, usize)>> = Vec::new();
 
-    // Start recursive search for captures.
-    // The initial "path" for the recursion is just the starting point, but find_capture_moves_recursive
-    // expects paths of actual jumps. So, we initiate it with an empty path, and it will add
-    // sequences of jumps.
     find_capture_moves_recursive(board, piece_row, piece_col, &piece, Vec::new(), &mut capture_paths);
 
     if !capture_paths.is_empty() {
-        // If there are capture paths, return the final landing spots of these paths.
         for path in capture_paths {
             if let Some(last_pos) = path.last() {
                 if !all_capture_final_positions.contains(last_pos) {
@@ -168,16 +135,13 @@ pub fn get_all_possible_moves(
         return all_capture_final_positions;
     }
 
-    // If no captures are available, find regular moves
     let mut regular_moves: Vec<(usize, usize)> = Vec::new();
     let move_offsets = if piece.is_king {
-        // Kings can move in all four diagonal directions
         vec![(-1, -1), (-1, 1), (1, -1), (1, 1)]
     } else {
-        // Non-king pieces have specific move directions based on color
         match piece.color {
-            Color::White => vec![(-1, -1), (-1, 1)], // White moves "up"
-            Color::Black => vec![(1, -1), (1, 1)],   // Black moves "down"
+            Color::White => vec![(-1, -1), (-1, 1)],
+            Color::Black => vec![(1, -1), (1, 1)],
         }
     };
 
@@ -187,7 +151,7 @@ pub fn get_all_possible_moves(
 
         if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
            to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
-            continue; // Target square is out of bounds
+            continue;
         }
         let to_row = to_row_i32 as usize;
         let to_col = to_col_i32 as usize;
@@ -200,7 +164,6 @@ pub fn get_all_possible_moves(
     regular_moves
 }
 
-// Checks if a move is valid according to checkers rules
 pub fn is_valid_move(
     board: &Board,
     from_row: usize,
@@ -209,64 +172,50 @@ pub fn is_valid_move(
     to_col: usize,
     piece: &Piece,
 ) -> bool {
-    // Basic checks for bounds and target empty
     if !board.in_bounds(to_row, to_col) { return false; }
     if board.get_piece(to_row, to_col).is_some() { return false; }
 
     let row_diff = to_row as i32 - from_row as i32;
     let col_diff = to_col as i32 - from_col as i32;
 
-    // Must be diagonal
     if col_diff.abs() != row_diff.abs() { return false; }
 
-    // KING MOVEMENT LOGIC
     if piece.is_king {
-        // King capture (2 steps)
-        if row_diff.abs() == 2 { // col_diff.abs() will also be 2 due to prior diagonal check
+        if row_diff.abs() == 2 {
             let mid_row = ((from_row as i32 + to_row as i32) / 2) as usize;
             let mid_col = ((from_col as i32 + to_col as i32) / 2) as usize;
-            // Check for opponent piece in middle for capture
             if let Some(mid_piece) = board.get_piece(mid_row, mid_col) {
-                if mid_piece.color != piece.color { // It's an opponent's piece
-                    return true; // Valid king capture
+                if mid_piece.color != piece.color {
+                    return true;
                 }
             }
-            return false; // Invalid king capture (middle not opponent, or empty, or own piece)
+            return false;
         }
-        // King regular move (1 step)
-        if row_diff.abs() == 1 { // col_diff.abs() will also be 1
-            return true; // Valid king regular move (any diagonal direction)
+        if row_diff.abs() == 1 {
+            return true;
         }
-        // Not a 1-step or 2-step diagonal move for a king
         return false;
     } else {
-        // REGULAR PIECE LOGIC
-        // Regular piece regular move (1 step)
-        if row_diff.abs() == 1 { // col_diff.abs() will also be 1
-            // Check direction based on color
+        if row_diff.abs() == 1 {
             return match piece.color {
-                Color::White => row_diff < 0, // White moves "up" (row index decreases)
-                Color::Black => row_diff > 0, // Black moves "down" (row index increases)
+                Color::White => row_diff < 0,
+                Color::Black => row_diff > 0,
             };
         }
-        // Regular piece capture (2 steps)
-        if row_diff.abs() == 2 { // col_diff.abs() will also be 2
+        if row_diff.abs() == 2 {
             let mid_row = ((from_row as i32 + to_row as i32) / 2) as usize;
             let mid_col = ((from_col as i32 + to_col as i32) / 2) as usize;
-            // Check for opponent piece in middle for capture
             if let Some(mid_piece) = board.get_piece(mid_row, mid_col) {
-                if mid_piece.color != piece.color { // It's an opponent's piece
-                    // Check direction based on color for capture
+                if mid_piece.color != piece.color {
                     return match piece.color {
-                        Color::White => row_diff < 0, // White captures "up"
-                        Color::Black => row_diff > 0, // Black captures "down"
+                        Color::White => row_diff < 0,
+                        Color::Black => row_diff > 0,
                     };
                 }
             }
-            return false; // Invalid regular piece capture (middle not opponent, or empty, or own piece)
+            return false;
         }
     }
-    // If move is not 1-step or 2-step diagonal (should be caught by diagonal check or above logic)
     false
 }
 
@@ -274,34 +223,28 @@ pub fn is_valid_move(
 pub fn can_piece_capture(board: &Board, piece_row: usize, piece_col: usize) -> bool {
     if let Some(piece) = board.get_piece(piece_row, piece_col) {
         let directions = if piece.is_king {
-            // Kings can capture in all four diagonal directions
             vec![(-2, -2), (-2, 2), (2, -2), (2, 2)]
         } else {
-            // Non-king pieces have specific capture directions based on color
             match piece.color {
-                Color::White => vec![(-2, -2), (-2, 2)], // White captures "up"
-                Color::Black => vec![(2, -2), (2, 2)],   // Black captures "down"
+                Color::White => vec![(-2, -2), (-2, 2)],
+                Color::Black => vec![(2, -2), (2, 2)],
             }
         };
 
         for (row_offset, col_offset) in directions {
-            // Ensure `piece_row + row_offset` and `piece_col + col_offset` don't underflow/overflow
             let to_row_i32 = piece_row as i32 + row_offset;
             let to_col_i32 = piece_col as i32 + col_offset;
 
             if to_row_i32 < 0 || to_row_i32 >= board.size as i32 || 
                to_col_i32 < 0 || to_col_i32 >= board.size as i32 {
-                continue; // Target square is out of bounds
+                continue;
             }
             let to_row = to_row_i32 as usize;
             let to_col = to_col_i32 as usize;
             
-            // Middle square calculation
-            // These calculations are safe because row_offset/col_offset is always +/-2
             let mid_row = (piece_row as i32 + to_row_i32) / 2;
             let mid_col = (piece_col as i32 + to_col_i32) / 2;
             
-            // Check if middle square is within bounds (it should be if to_row/to_col is)
             if mid_row < 0 || mid_row >= board.size as i32 || 
                mid_col < 0 || mid_col >= board.size as i32 {
                 continue; 
@@ -309,14 +252,9 @@ pub fn can_piece_capture(board: &Board, piece_row: usize, piece_col: usize) -> b
             let mid_row_usize = mid_row as usize;
             let mid_col_usize = mid_col as usize;
 
-
-            // Check if target square is empty and middle square has an opponent's piece
             if board.get_piece(to_row, to_col).is_none() {
                 if let Some(mid_piece) = board.get_piece(mid_row_usize, mid_col_usize) {
                     if mid_piece.color != piece.color {
-                        // Directionality for non-kings is implicitly handled by the `directions` vector.
-                        // For kings, all directions in the vector are valid.
-                        // `is_valid_move` logic for captures is essentially replicated here.
                         return true;
                     }
                 }
@@ -325,7 +263,6 @@ pub fn can_piece_capture(board: &Board, piece_row: usize, piece_col: usize) -> b
     }
     false
 }
-
 
 /// Checks if a piece has more captures available
 pub fn has_more_captures_for_piece(board: &Board, row: usize, col: usize) -> bool {
@@ -399,12 +336,10 @@ pub fn has_captures_available(board: &Board, current_player: Color) -> bool {
 
 /// Checks if the current player is in a stalemate (no valid moves)
 pub fn is_stalemate(board: &Board, current_player: Color) -> bool {
-    // First check if there are any captures available
     if has_captures_available(board, current_player) {
         return false;
     }
 
-    // If no captures are available, check for regular moves
     for row in 0..board.size {
         for col in 0..board.size {
             if let Some(piece) = board.get_piece(row, col) {
