@@ -114,13 +114,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 needs_render = true;
                             }
                             Some(_) => {
-                                let move_result = game.make_move(row, col);
-                                if let Err(_e) = move_result {
-                                    // Error will be visible in UI
+                                // Check if the selected cell is in possible moves
+                                if let Some(possible_moves) = &game.possible_moves {
+                                    if !possible_moves.contains(&(row, col)) {
+                                        // Only clear selection if NOT in a multi-capture sequence
+                                        if !game.is_in_multi_capture() {
+                                            game.selected_piece = None;
+                                            game.possible_moves = None;
+                                        }
+                                        needs_render = true;
+                                    } else {
+                                        // Attempt the move
+                                        let move_result = game.make_move(row, col);
+                                        if let Err(_e) = move_result {
+                                            // Error will be visible in UI
+                                        } else {
+                                            check_and_set_game_over(&mut game);
+                                        }
+                                        needs_render = true;
+                                    }
                                 } else {
-                                    check_and_set_game_over(&mut game);
+                                    // No possible moves, clear selection
+                                    game.selected_piece = None;
+                                    needs_render = true;
                                 }
-                                needs_render = true;
                             }
                         }
                     }
