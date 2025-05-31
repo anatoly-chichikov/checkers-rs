@@ -23,6 +23,8 @@ pub struct CheckersGame {
     pub is_game_over: bool,
     pub selected_piece: Option<(usize, usize)>,
     pub possible_moves: Option<Vec<(usize, usize)>>,
+    pub last_move: Option<((usize, usize), (usize, usize))>,
+    pub ai_thinking: bool,
 }
 
 impl Default for CheckersGame {
@@ -41,7 +43,31 @@ impl CheckersGame {
             is_game_over: false,
             selected_piece: None,
             possible_moves: None,
+            last_move: None,
+            ai_thinking: false,
         }
+    }
+
+    pub fn count_pieces(&self) -> (usize, usize, usize, usize) {
+        let mut white_regular = 0;
+        let mut white_kings = 0;
+        let mut black_regular = 0;
+        let mut black_kings = 0;
+
+        for row in 0..self.board.size {
+            for col in 0..self.board.size {
+                if let Some(piece) = self.board.get_piece(row, col) {
+                    match (piece.color, piece.is_king) {
+                        (Color::White, false) => white_regular += 1,
+                        (Color::White, true) => white_kings += 1,
+                        (Color::Black, false) => black_regular += 1,
+                        (Color::Black, true) => black_kings += 1,
+                    }
+                }
+            }
+        }
+
+        (white_regular, white_kings, black_regular, black_kings)
     }
 
     pub fn select_piece(&mut self, row: usize, col: usize) -> Result<(), GameError> {
@@ -101,6 +127,9 @@ impl CheckersGame {
 
         self.board
             .move_piece((from_row, from_col), (to_row, to_col));
+
+        // Save the last move
+        self.last_move = Some(((from_row, from_col), (to_row, to_col)));
 
         if game_logic::should_promote(&piece, to_row, self.board.size) {
             if let Some(mut promoted_piece) = self.board.get_piece(to_row, to_col) {
