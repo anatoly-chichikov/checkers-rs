@@ -86,7 +86,15 @@ impl UI {
                                 PieceColor::Black => Color::Red,
                             },
                         ),
-                        None => ("  _  ".to_string(), Color::DarkGrey),
+                        None => {
+                            // Dark squares (playable) have even sum of row + col
+                            // Light squares (non-playable) have odd sum
+                            if (row + col) % 2 == 0 {
+                                ("     ".to_string(), Color::DarkGrey)
+                            } else {
+                                (" ░░░ ".to_string(), Color::DarkGrey)
+                            }
+                        },
                     };
 
                 stdout.queue(SetForegroundColor(cell_border_color))?;
