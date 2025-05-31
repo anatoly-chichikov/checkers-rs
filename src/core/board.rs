@@ -13,14 +13,12 @@ impl Board {
     }
 
     pub fn initialize(&mut self) {
-        // Clear the board first
         for row in 0..self.size {
             for col in 0..self.size {
                 self.cells[row][col] = None;
             }
         }
 
-        // Place pieces in the standard initial layout
         for row in 0..3 {
             if row % 2 == 0 {
                 for col in (1..self.size).step_by(2) {

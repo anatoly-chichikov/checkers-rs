@@ -20,7 +20,6 @@ impl Link {
 
 impl Element for Link {
     fn render(&self, writer: &mut StyleWriter) -> io::Result<()> {
-        // We only render the link text, not the URL
         writer.write_colored(&self.text, Color::Blue)?;
         Ok(())
     }

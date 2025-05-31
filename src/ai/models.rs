@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-// New structs for Gemini API communication
 #[derive(Debug, Serialize)]
 pub struct GeminiRequest {
     pub contents: Vec<Content>,
@@ -33,5 +32,4 @@ pub struct GeminiResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Candidate {
     pub content: Content,
-    // pub finish_reason: String, // This line is removed
 } 
