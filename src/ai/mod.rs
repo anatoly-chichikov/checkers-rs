@@ -1,4 +1,3 @@
-// Re-export public API
 pub mod gemini_client;
 pub mod error;
 pub mod models;
