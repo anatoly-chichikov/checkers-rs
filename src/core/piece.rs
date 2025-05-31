@@ -31,12 +31,12 @@ impl Piece {
         self.is_king = true;
     }
 
-    pub fn display(&self) -> char {
+    pub fn display(&self) -> String {
         match (self.color, self.is_king) {
-            (Color::White, false) => 'w',
-            (Color::White, true) => 'W',
-            (Color::Black, false) => 'b',
-            (Color::Black, true) => 'B',
+            (Color::White, false) => "(w)".to_string(),
+            (Color::White, true) => "[W]".to_string(),
+            (Color::Black, false) => "(b)".to_string(),
+            (Color::Black, true) => "[B]".to_string(),
         }
     }
 }
