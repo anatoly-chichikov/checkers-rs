@@ -87,8 +87,6 @@ impl UI {
                             },
                         ),
                         None => {
-                            // Dark squares (playable) have even sum of row + col
-                            // Light squares (non-playable) have odd sum
                             if (row + col) % 2 == 0 {
                                 ("     ".to_string(), Color::DarkGrey)
                             } else {
@@ -154,6 +152,12 @@ impl UI {
                 stdout.queue(ResetColor)?;
             }
         }
+        
+        stdout.write_all(b"\n\r")?;
+        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+        writeln!(stdout, "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit")?;
+        stdout.queue(ResetColor)?;
+        
         Ok(())
     }
 
