@@ -18,6 +18,12 @@ pub struct LoadingAnimation {
     current: usize,
 }
 
+impl Default for LoadingAnimation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LoadingAnimation {
     pub fn new() -> Self {
         Self {
@@ -26,7 +32,7 @@ impl LoadingAnimation {
         }
     }
 
-    pub fn next(&mut self) -> &str {
+    pub fn next_frame(&mut self) -> &str {
         let frame = self.frames[self.current];
         self.current = (self.current + 1) % self.frames.len();
         frame
@@ -43,7 +49,7 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
     let mut loading = LoadingAnimation::new();
     let loading_thread = thread::spawn(move || {
         while running_clone.load(Ordering::Relaxed) {
-            print!("\r{} {}", loading.next(), messages::LOADING_MESSAGE);
+            print!("\r{} {}", loading.next_frame(), messages::LOADING_MESSAGE);
             if io::stdout().flush().is_err() {
                 break;
             }
@@ -66,4 +72,4 @@ pub fn stop_loading_animation(
     stdout.execute(Show)?;
 
     Ok(())
-} 
+}

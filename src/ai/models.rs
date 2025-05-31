@@ -32,4 +32,4 @@ pub struct GeminiResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Candidate {
     pub content: Content,
-} 
+}

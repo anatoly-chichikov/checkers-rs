@@ -1,6 +1,6 @@
+mod ai;
 mod core;
 mod interface;
-mod ai;
 mod utils;
 
 use crossterm::{
@@ -12,14 +12,14 @@ use std::io::{self, stdout, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use crate::ai::{explain_rules, get_ai_move, AIError};
 use crate::core::game;
+use crate::core::piece::Color as PieceColor;
 use crate::interface::input;
 use crate::interface::input::{CursorDirection, GameInput};
 use crate::interface::messages;
 use crate::interface::ui::UI;
 use crate::utils::markdown::parser::MarkdownRenderer;
-use crate::ai::{explain_rules, get_ai_move, AIError};
-use crate::core::piece::Color as PieceColor;
 
 fn cleanup_terminal() -> io::Result<()> {
     let mut stdout = stdout();
@@ -118,14 +118,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             None => {
                                 let select_result = game.select_piece(row, col);
                                 if let Err(e) = select_result {
-                                    display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_PLAYER_ERROR, &format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    display_game_message(
+                                        &mut stdout,
+                                        board_bottom_y + MSG_Y_OFFSET_PLAYER_ERROR,
+                                        &format!("{} {}", messages::ERROR_PREFIX, e),
+                                    )?;
                                 }
                                 needs_render = true;
                             }
                             Some(_) => {
                                 let move_result = game.make_move(row, col);
                                 if let Err(e) = move_result {
-                                    display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_PLAYER_ERROR, &format!("{} {}", messages::ERROR_PREFIX, e))?;
+                                    display_game_message(
+                                        &mut stdout,
+                                        board_bottom_y + MSG_Y_OFFSET_PLAYER_ERROR,
+                                        &format!("{} {}", messages::ERROR_PREFIX, e),
+                                    )?;
                                 } else {
                                     check_and_set_game_over(&mut game);
                                 }
@@ -139,26 +147,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if game.current_player == PieceColor::Black && !game.is_game_over {
-            display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_AI_STATUS, "Black (AI) is thinking...")?;
+            display_game_message(
+                &mut stdout,
+                board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
+                "Black (AI) is thinking...",
+            )?;
 
             match get_ai_move(&game).await {
                 Ok(((from_row, from_col), (to_row, to_col))) => {
                     let select_result = game.select_piece(from_row, from_col);
                     if let Err(e) = select_result {
-                        display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_AI_STATUS, &format!("{} AI failed to select piece: {}. Skipping turn.", messages::ERROR_PREFIX, e))?;
+                        display_game_message(
+                            &mut stdout,
+                            board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
+                            &format!(
+                                "{} AI failed to select piece: {}. Skipping turn.",
+                                messages::ERROR_PREFIX,
+                                e
+                            ),
+                        )?;
                         game.switch_player();
                     } else {
                         let move_result = game.make_move(to_row, to_col);
                         if let Err(e) = move_result {
-                            display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_AI_STATUS, &format!("{} AI failed to make move: {}. Skipping turn.", messages::ERROR_PREFIX, e))?;
-                            if game.current_player == PieceColor::Black { game.switch_player(); }
+                            display_game_message(
+                                &mut stdout,
+                                board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
+                                &format!(
+                                    "{} AI failed to make move: {}. Skipping turn.",
+                                    messages::ERROR_PREFIX,
+                                    e
+                                ),
+                            )?;
+                            if game.current_player == PieceColor::Black {
+                                game.switch_player();
+                            }
                         } else {
                             check_and_set_game_over(&mut game);
                         }
                     }
                 }
                 Err(ai_error) => {
-                    display_game_message(&mut stdout, board_bottom_y + MSG_Y_OFFSET_AI_STATUS, &format!("{} AI error: {}. Skipping turn.", messages::ERROR_PREFIX, ai_error))?;
+                    display_game_message(
+                        &mut stdout,
+                        board_bottom_y + MSG_Y_OFFSET_AI_STATUS,
+                        &format!(
+                            "{} AI error: {}. Skipping turn.",
+                            messages::ERROR_PREFIX,
+                            ai_error
+                        ),
+                    )?;
                     game.switch_player();
                 }
             }
