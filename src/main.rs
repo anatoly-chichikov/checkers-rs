@@ -71,11 +71,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize game state
     let mut game = game::CheckersGame::new();
     let mut ui = UI::new();
+    let mut needs_render = true; // Initialize needs_render flag
 
     // Game loop
     while running.load(Ordering::SeqCst) {
-        // Render current state
-        ui.render_game(&game)?;
+        // Render current state if needed
+        if needs_render {
+            ui.render_game(&game)?;
+            needs_render = false;
+        }
 
         // Handle input
         if let Some(input) = input::read_input()? {
@@ -89,17 +93,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         CursorDirection::Right => (row, (col + 1).min(game.board.size - 1)),
                     };
                     ui.set_cursor(new_row, new_col);
+                    needs_render = true;
                 }
                 GameInput::Select => {
                     let (row, col) = ui.get_cursor();
-                    // If we have a selected piece and cursor is on it, deselect it
                     if game.selected_piece == Some((row, col)) {
                         game.selected_piece = None;
+                        needs_render = true;
                     } else {
                         match game.selected_piece {
-                            None => {
-                                if let Err(e) = game.select_piece(row, col) {
-                                    // Move to bottom of screen and show error
+                            None => { // Attempting to select a piece
+                                let select_result = game.select_piece(row, col);
+                                if let Err(e) = select_result {
+                                    // Error when selecting, display message
                                     stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
                                     let error_msg = format_model_output(&format!(
                                         "{} {}",
@@ -109,10 +115,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     writeln!(stdout, "{}", error_msg)?;
                                     stdout.flush()?;
                                 }
+                                // select_piece call (successful or not) always means we should update visual state or show error
+                                needs_render = true;
                             }
-                            Some(_) => {
-                                if let Err(e) = game.make_move(row, col) {
-                                    // Move to bottom of screen and show error
+                            Some(_) => { // Attempting to make a move
+                                let move_result = game.make_move(row, col);
+                                if let Err(e) = move_result {
+                                    // Error when moving, display message
                                     stdout.queue(MoveTo(0, game.board.size as u16 + 3))?;
                                     let error_msg = format_model_output(&format!(
                                         "{} {}",
@@ -121,7 +130,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     ))?;
                                     writeln!(stdout, "{}", error_msg)?;
                                     stdout.flush()?;
+                                } else { // Move was successful
+                                    if game.check_winner().is_some() || game.is_stalemate() {
+                                        game.is_game_over = true;
+                                    }
                                 }
+                                // Whether move succeeded or failed, game state (board, player) changed or error shown
+                                needs_render = true;
                             }
                         }
                     }
@@ -132,74 +147,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // AI's turn (Black)
         if game.current_player == PieceColor::Black && !game.is_game_over {
-            // Display AI thinking message
             stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
             let thinking_msg = format_model_output("Black (AI) is thinking...")?;
-            write!(stdout, "{}", thinking_msg)?; // Using write! to handle potential ANSI codes from format_model_output
-            stdout.queue(MoveTo(0, game.board.size as u16 + 5))?; // Move cursor down for next line
+            write!(stdout, "{}", thinking_msg)?;
+            stdout.queue(MoveTo(0, game.board.size as u16 + 5))?;
             stdout.flush()?;
 
             match get_ai_move(&game).await {
                 Ok(((from_row, from_col), (to_row, to_col))) => {
-                    // Attempt to make the AI's move
-                    if let Err(e) = game.select_piece(from_row, from_col) {
+                    let select_result = game.select_piece(from_row, from_col);
+                    if let Err(e) = select_result {
                         stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
                         let error_msg = format_model_output(&format!(
                             "{} AI failed to select piece: {}. Skipping turn.",
-                            messages::ERROR_PREFIX,
-                            e
+                            messages::ERROR_PREFIX, e
                         ))?;
                         writeln!(stdout, "{}", error_msg)?;
                         stdout.flush()?;
-                        game.switch_player(); // Switch to White if AI selection fails
-                    } else {
-                        if let Err(e) = game.make_move(to_row, to_col) {
+                        game.switch_player();
+                    } else { // Piece selected successfully by AI
+                        let move_result = game.make_move(to_row, to_col);
+                        if let Err(e) = move_result {
                             stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
                             let error_msg = format_model_output(&format!(
                                 "{} AI failed to make move: {}. Skipping turn.",
-                                messages::ERROR_PREFIX,
-                                e
+                                messages::ERROR_PREFIX, e
                             ))?;
                             writeln!(stdout, "{}", error_msg)?;
                             stdout.flush()?;
-                            // make_move switches player on success, if it fails before switching,
-                            // and it was Black's turn, it should become White's turn.
-                            if game.current_player == PieceColor::Black {
-                                game.switch_player();
+                            if game.current_player == PieceColor::Black { game.switch_player(); }
+                        } else { // AI move successful
+                            if game.check_winner().is_some() || game.is_stalemate() {
+                                game.is_game_over = true;
                             }
                         }
-                        // Successful move, player is already switched by make_move
                     }
                 }
-                Err(ai_error) => {
+                Err(ai_error) => { // Error from get_ai_move
                     stdout.queue(MoveTo(0, game.board.size as u16 + 4))?;
                     let error_msg = format_model_output(&format!(
                         "{} AI error: {}. Skipping turn.",
-                        messages::ERROR_PREFIX,
-                        ai_error
+                        messages::ERROR_PREFIX, ai_error
                     ))?;
                     writeln!(stdout, "{}", error_msg)?;
                     stdout.flush()?;
-                    game.switch_player(); // Switch to White if AI errors
+                    game.switch_player();
                 }
             }
-            // The main ui.render_game(&game)? at the start of the loop will redraw.
-            // A small delay can make AI moves more observable.
-            // std::thread::sleep(std::time::Duration::from_millis(500)); // Optional: for better UX
+            needs_render = true; // AI turn always triggers a re-render
+            // std::thread::sleep(std::time::Duration::from_millis(500)); // Optional
         }
 
-        // Check for game over
-        if let Some(_winner) = game.check_winner() {
-            game.is_game_over = true;
-            ui.render_game(&game)?;
-            break;
+        // Check for game over (after player or AI move)
+        if game.is_game_over {
+            needs_render = true; // Ensure final state is rendered
         }
 
-        // Check for stalemate
-        if game.is_stalemate() {
-            game.is_game_over = true;
-            ui.render_game(&game)?;
-            break;
+        if needs_render && game.is_game_over { // Render once more if game ended and needs_render was set
+            ui.render_game(&game)?; // Render the final game state
+            needs_render = false; // Avoid re-rendering if loop somehow continued
+            break; // Exit loop as game is over
         }
     }
 
