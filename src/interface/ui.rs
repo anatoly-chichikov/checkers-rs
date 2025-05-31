@@ -15,9 +15,9 @@ pub struct UI {
 }
 
 fn get_board_width() -> usize {
-    // Each cell is 7 chars wide (-------) and we have 8 cells
+    // Each cell is 5 chars wide plus borders, total 6 chars per cell
     // Plus 3 chars for row numbers on the left
-    3 + (7 * 8)
+    3 + (6 * 8) + 1 // +1 for the final border
 }
 
 fn get_centering_offset() -> usize {
@@ -79,7 +79,7 @@ impl UI {
         stdout.queue(SetForegroundColor(Color::Blue))?;
         stdout.queue(Print("   "))?;
         for col in 0..board_size {
-            write!(stdout, "   {}   ", (b'A' + col as u8) as char)?;
+            write!(stdout, "   {}  ", (b'A' + col as u8) as char)?;
         }
         stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
@@ -89,20 +89,17 @@ impl UI {
     fn render_board_rows(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         let offset = get_centering_offset();
 
-        for row in 0..game.board.size {
-            // Top border of cells
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.write_all(b"   ")?;
-            for col in 0..game.board.size {
-                let cell_border_color = self.get_cell_border_style(game, (row, col));
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                stdout.write_all(b"+-----+")?;
-                stdout.queue(ResetColor)?;
-            }
-            stdout.write_all(b"\n\r")?;
+        // Top border
+        if offset > 0 {
+            write!(stdout, "{}", " ".repeat(offset))?;
+        }
+        stdout.write_all(b"   ")?;
+        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+        write!(stdout, "┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐")?;
+        stdout.queue(ResetColor)?;
+        stdout.write_all(b"\n\r")?;
 
+        for row in 0..game.board.size {
             // Cell contents
             if offset > 0 {
                 write!(stdout, "{}", " ".repeat(offset))?;
@@ -116,7 +113,7 @@ impl UI {
 
                 // Left border of the cell
                 stdout.queue(SetForegroundColor(cell_border_color))?;
-                write!(stdout, "|")?;
+                write!(stdout, "│")?;
                 stdout.queue(ResetColor)?;
 
                 let (content_to_display, text_color_for_content, is_bold) =
@@ -136,7 +133,7 @@ impl UI {
                             if (row + col) % 2 == 0 {
                                 ("     ".to_string(), Color::DarkGrey, false)
                             } else {
-                                (" ░░░ ".to_string(), Color::DarkGrey, false)
+                                ("░░░░░".to_string(), Color::DarkGrey, false)
                             }
                         }
                     };
@@ -150,35 +147,39 @@ impl UI {
                     stdout.queue(SetAttribute(Attribute::Reset))?;
                 }
                 stdout.queue(ResetColor)?;
-
-                // Don't draw right border for the last cell to avoid double lines
-                if col < game.board.size - 1 {
-                    stdout.queue(SetForegroundColor(cell_border_color))?;
-                    write!(stdout, "|")?;
-                    stdout.queue(ResetColor)?;
-                }
             }
-            // Add final right border
+
+            // Final right border
             let last_cell_border_color =
                 self.get_cell_border_style(game, (row, game.board.size - 1));
             stdout.queue(SetForegroundColor(last_cell_border_color))?;
-            write!(stdout, "|")?;
+            write!(stdout, "│")?;
             stdout.queue(ResetColor)?;
             stdout.write_all(b"\n\r")?;
 
-            // Bottom border of cells
-            if offset > 0 {
-                write!(stdout, "{}", " ".repeat(offset))?;
-            }
-            stdout.write_all(b"   ")?;
-            for col in 0..game.board.size {
-                let cell_border_color = self.get_cell_border_style(game, (row, col));
-                stdout.queue(SetForegroundColor(cell_border_color))?;
-                stdout.write_all(b"+-----+")?;
+            // Horizontal separator (except after last row)
+            if row < game.board.size - 1 {
+                if offset > 0 {
+                    write!(stdout, "{}", " ".repeat(offset))?;
+                }
+                stdout.write_all(b"   ")?;
+                stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+                write!(stdout, "├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤")?;
                 stdout.queue(ResetColor)?;
+                stdout.write_all(b"\n\r")?;
             }
-            stdout.write_all(b"\n\r")?;
         }
+
+        // Bottom border
+        if offset > 0 {
+            write!(stdout, "{}", " ".repeat(offset))?;
+        }
+        stdout.write_all(b"   ")?;
+        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+        write!(stdout, "└─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘")?;
+        stdout.queue(ResetColor)?;
+        stdout.write_all(b"\n\r")?;
+
         Ok(())
     }
 
