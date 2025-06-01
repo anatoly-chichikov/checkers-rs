@@ -6,3 +6,9 @@
 
 # Spec files
 /spec/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/

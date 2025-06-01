@@ -289,6 +289,33 @@ impl UI {
         Ok(())
     }
 
+    fn render_ai_error(&self, stdout: &mut io::Stdout, error_text: &str) -> io::Result<()> {
+        let offset = get_centering_offset();
+
+        // Error section with red color
+        stdout.write_all(b"\n\r")?;
+        if offset > 0 {
+            write!(stdout, "{}", " ".repeat(offset))?;
+        }
+        stdout.queue(SetForegroundColor(Color::Red))?;
+        stdout.queue(SetAttribute(Attribute::Bold))?;
+        write!(stdout, "⚠️  AI ERROR")?;
+        stdout.queue(SetAttribute(Attribute::Reset))?;
+        stdout.queue(ResetColor)?;
+        stdout.write_all(b"\n\r")?;
+
+        // Error message
+        if offset > 0 {
+            write!(stdout, "{}", " ".repeat(offset))?;
+        }
+        stdout.queue(SetForegroundColor(Color::Red))?;
+        write!(stdout, "{}", error_text)?;
+        stdout.queue(ResetColor)?;
+        stdout.write_all(b"\n\r")?;
+
+        Ok(())
+    }
+
     fn render_controls(&self, stdout: &mut io::Stdout) -> io::Result<()> {
         let offset = get_centering_offset();
 
@@ -457,6 +484,11 @@ impl UI {
 
         // Show controls only if game is not over
         if !game.is_game_over {
+            // Show AI error if available (above controls)
+            if let Some(error_text) = &game.ai_error {
+                self.render_ai_error(&mut stdout, error_text)?;
+            }
+
             self.render_controls(&mut stdout)?;
 
             // Show hint if available

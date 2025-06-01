@@ -26,6 +26,7 @@ pub struct CheckersGame {
     pub possible_moves: Option<Vec<(usize, usize)>>,
     pub ai_thinking: bool,
     pub move_history: MoveHistory,
+    pub ai_error: Option<String>,
 }
 
 impl Default for CheckersGame {
@@ -46,6 +47,7 @@ impl CheckersGame {
             possible_moves: None,
             ai_thinking: false,
             move_history: MoveHistory::new(),
+            ai_error: None,
         }
     }
 
