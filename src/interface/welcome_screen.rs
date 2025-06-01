@@ -8,7 +8,7 @@ use std::io::{self, stdout, Write};
 
 use crate::interface::input::{read_input, GameInput};
 
-fn clean_section_text(text: &str) -> &str {
+fn clean_section_text(text: &str) -> String {
     let mut result = text.trim();
 
     // Remove all possible prefixes
@@ -26,10 +26,8 @@ fn clean_section_text(text: &str) -> &str {
         }
     }
 
-    // Remove leading dots
-    result = result.trim_start_matches("...");
     result = result.trim_start_matches('\n');
-    result.trim()
+    result.trim().to_string()
 }
 
 fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
@@ -197,15 +195,15 @@ pub fn display_welcome_screen(message: &str) -> io::Result<bool> {
         (did_you_know, tip, challenge)
     } else {
         (
-            "The game of checkers has been played for thousands of years!",
-            "Always try to control the center of the board.",
-            "Try to win a game without losing any pieces!",
+            "The game of checkers has been played for thousands of years!".to_string(),
+            "Always try to control the center of the board.".to_string(),
+            "Try to win a game without losing any pieces!".to_string(),
         )
     };
 
-    print_did_you_know_section(&mut stdout, did_you_know)?;
-    print_tip_section(&mut stdout, tip)?;
-    print_challenge_section(&mut stdout, challenge)?;
+    print_did_you_know_section(&mut stdout, &did_you_know)?;
+    print_tip_section(&mut stdout, &tip)?;
+    print_challenge_section(&mut stdout, &challenge)?;
 
     stdout.queue(SetForegroundColor(Color::DarkGrey))?;
     print_centered_line(&mut stdout, "Press ENTER to begin or Q/ESC to quit...", 65)?;

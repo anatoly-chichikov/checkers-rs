@@ -51,8 +51,9 @@ This is a terminal-based checkers game built in Rust with a modular architecture
 
 3. **AI Integration** (`src/ai/`):
    - `gemini_client.rs`: Gemini API client for AI opponent moves
-   - Requires `GEMINI_API_KEY` in `.env` file
-   - Game functions without API key but AI opponent won't work
+   - `hint.rs`: AI-powered hint system for human players
+   - Requires `GEMINI_API_KEY` and `GEMINI_MODEL` in `.env` file
+   - Game functions without API key but AI features won't work
 
 4. **Key Design Decisions**:
    - Uses crossterm for cross-platform terminal manipulation

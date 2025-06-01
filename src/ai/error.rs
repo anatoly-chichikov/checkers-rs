@@ -9,6 +9,8 @@ pub enum AIError {
     ParseError(String),
     #[error("API key not found - add GEMINI_API_KEY to your .env file to enable AI features")]
     NoApiKey,
+    #[error("Model not specified - add GEMINI_MODEL to your .env file")]
+    NoModel,
     #[error("AI response format is invalid: {0}")]
     InvalidResponseFormat(String),
     #[error("No possible moves available for the AI.")]

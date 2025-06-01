@@ -11,7 +11,7 @@ use std::io::{self, stdout};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::ai::{explain_rules, get_ai_move, AIError};
+use crate::ai::{explain_rules, get_ai_move, hint::HintProvider, AIError};
 use crate::core::game;
 use crate::core::piece::Color as PieceColor;
 use crate::interface::input;
@@ -39,10 +39,18 @@ fn check_and_set_game_over(game: &mut game::CheckersGame) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize terminal for loading animation
+    terminal::enable_raw_mode()?;
+    {
+        let mut stdout = stdout();
+        stdout.execute(terminal::EnterAlternateScreen)?;
+        stdout.execute(Clear(ClearType::All))?;
+    }
+
     let welcome_message = match explain_rules().await {
         Ok(rules) => rules,
-        Err(AIError::NoApiKey) => {
-            eprintln!("Note: Add GEMINI_API_KEY to your .env file to enable AI-powered content.");
+        Err(AIError::NoApiKey) | Err(AIError::NoModel) => {
+            eprintln!("Note: Add GEMINI_API_KEY and GEMINI_MODEL to your .env file to enable AI-powered content.");
             String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
         }
         Err(e) => {
@@ -50,6 +58,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
         }
     };
+
+    // Reset terminal for welcome screen
+    terminal::disable_raw_mode()?;
+    {
+        let mut stdout = stdout();
+        stdout.execute(terminal::LeaveAlternateScreen)?;
+    }
 
     let should_continue = display_welcome_screen(&welcome_message)?;
 
@@ -82,13 +97,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut game = game::CheckersGame::new();
     let mut ui = UI::new();
     let mut needs_render = true;
+    let mut current_hint: Option<String> = None;
 
     // Check if AI mode is available
-    let ai_enabled = env::var("GEMINI_API_KEY").is_ok();
+    let api_key = env::var("GEMINI_API_KEY").ok();
+    let model = env::var("GEMINI_MODEL").ok();
+    let ai_enabled = api_key.is_some() && model.is_some();
+    let hint_provider = api_key
+        .as_ref()
+        .and_then(|key| HintProvider::new(key.clone()).ok());
 
     while running.load(Ordering::SeqCst) {
         if needs_render {
-            ui.render_game(&game)?;
+            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
             needs_render = false;
         }
 
@@ -136,6 +157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             // Error will be visible in UI
                                         } else {
                                             check_and_set_game_over(&mut game);
+                                            current_hint = None; // Clear hint after move
                                         }
                                         needs_render = true;
                                     }
@@ -148,6 +170,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
+                GameInput::Hint => {
+                    if let Some(ref provider) = hint_provider {
+                        if game.current_player == PieceColor::White && !game.is_game_over {
+                            // Get hint asynchronously
+                            match provider
+                                .get_hint(&game.board, game.current_player, &game.move_history)
+                                .await
+                            {
+                                Ok(hint) => {
+                                    current_hint = Some(hint);
+                                    needs_render = true;
+                                }
+                                Err(e) => {
+                                    current_hint = Some(format!("Unable to get hint: {}", e));
+                                    needs_render = true;
+                                }
+                            }
+                        }
+                    } else {
+                        current_hint = Some(
+                            "Hints require GEMINI_API_KEY and GEMINI_MODEL in .env file"
+                                .to_string(),
+                        );
+                        needs_render = true;
+                    }
+                }
                 GameInput::Quit => break,
             }
         }
@@ -158,22 +206,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // AI mode: Black is controlled by AI
         if ai_enabled && game.current_player == PieceColor::Black && !game.is_game_over {
             game.ai_thinking = true;
-            ui.render_game(&game)?;
+            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
 
             match get_ai_move(&game).await {
                 Ok(((from_row, from_col), (to_row, to_col))) => {
                     game.ai_thinking = false;
                     let select_result = game.select_piece(from_row, from_col);
-                    if let Err(_e) = select_result {
+                    if let Err(e) = select_result {
+                        eprintln!(
+                            "AI failed to select piece at ({}, {}): {:?}",
+                            from_row, from_col, e
+                        );
                         game.switch_player();
                     } else {
                         let move_result = game.make_move(to_row, to_col);
-                        if let Err(_e) = move_result {
+                        if let Err(e) = move_result {
+                            eprintln!("AI failed to move to ({}, {}): {:?}", to_row, to_col, e);
                             if game.current_player == PieceColor::Black {
                                 game.switch_player();
                             }
                         } else {
                             check_and_set_game_over(&mut game);
+                            current_hint = None; // Clear hint after move
                         }
                     }
                 }
@@ -183,11 +237,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             game.ai_thinking = false; // Ensure flag is reset after AI move
-            needs_render = true;
+
+            // Immediately render the board to show AI move
+            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
+            needs_render = false; // Reset since we just rendered
         }
 
         if game.is_game_over {
-            ui.render_game(&game)?;
+            ui.render_game_with_hint_and_mode(&game, None, ai_enabled)?;
             // Wait for any key press before exiting
             loop {
                 if input::read_input()?.is_some() {

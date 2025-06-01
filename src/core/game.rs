@@ -1,5 +1,6 @@
 use crate::core::board::Board;
 use crate::core::game_logic::{self, can_piece_capture, get_all_possible_moves};
+use crate::core::move_history::MoveHistory;
 use crate::core::piece::Color;
 use thiserror::Error;
 
@@ -24,6 +25,7 @@ pub struct CheckersGame {
     pub selected_piece: Option<(usize, usize)>,
     pub possible_moves: Option<Vec<(usize, usize)>>,
     pub ai_thinking: bool,
+    pub move_history: MoveHistory,
 }
 
 impl Default for CheckersGame {
@@ -43,6 +45,7 @@ impl CheckersGame {
             selected_piece: None,
             possible_moves: None,
             ai_thinking: false,
+            move_history: MoveHistory::new(),
         }
     }
 
@@ -95,21 +98,34 @@ impl CheckersGame {
         }
 
         let row_diff_abs = (to_row as i32 - from_row as i32).abs();
+        let mut captured = Vec::new();
         if row_diff_abs == 2 {
             let mid_row = (from_row + to_row) / 2;
             let mid_col = (from_col + to_col) / 2;
+            captured.push((mid_row, mid_col));
             self.board.set_piece(mid_row, mid_col, None);
         }
 
         self.board
             .move_piece((from_row, from_col), (to_row, to_col));
 
+        let mut became_king = false;
         if game_logic::should_promote(&piece, to_row, self.board.size) {
             if let Some(mut promoted_piece) = self.board.get_piece(to_row, to_col) {
                 promoted_piece.promote_to_king();
                 self.board.set_piece(to_row, to_col, Some(promoted_piece));
+                became_king = true;
             }
         }
+
+        // Record the move in history
+        self.move_history.add_move(
+            (from_row, from_col),
+            (to_row, to_col),
+            self.current_player,
+            captured,
+            became_king,
+        );
 
         if row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col)
         {

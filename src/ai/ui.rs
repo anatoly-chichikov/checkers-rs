@@ -13,6 +13,12 @@ use std::{
 };
 
 pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<()>), io::Error> {
+    start_loading_animation_with_message("Waiting for the magic...")
+}
+
+pub fn start_loading_animation_with_message(
+    message: &'static str,
+) -> Result<(Arc<AtomicBool>, thread::JoinHandle<()>), io::Error> {
     let mut stdout = io::stdout();
     stdout.execute(Hide)?;
 
@@ -22,7 +28,6 @@ pub fn start_loading_animation() -> Result<(Arc<AtomicBool>, thread::JoinHandle<
     let loading_thread = thread::spawn(move || {
         let spinner_frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         let mut frame_idx = 0;
-        let message = "Waiting for the magic...";
 
         while running_clone.load(Ordering::Relaxed) {
             let mut stdout = io::stdout();

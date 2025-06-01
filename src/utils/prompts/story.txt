@@ -5,7 +5,7 @@ Generate exactly three sections in English, each random but strictly about check
    - **Tip of the Day**
    - **Challenge**
 
-2. The next line must begin with three dots ("...") and continue the idea without repeating the heading.
+2. The next line should contain the content for that section (fact, tip, or challenge).
 
 Guidelines:
 - All content must be strictly about checkers.
@@ -21,11 +21,11 @@ No additional text beyond these three sections are allowed, separate them with a
 Example (do not output this example; follow the format only):
 --------------------------------------------------
 **Did You Know?**
-...checkers is one of the oldest board games, with a history spanning thousands of years.
+Checkers is one of the oldest board games, with a history spanning thousands of years.
 
 **Tip of the Day**
-...remember to control the center of the board for a strategic advantage.
+Remember to control the center of the board for a strategic advantage.
 
 **Challenge**
-...analyze your last game and identify one move that could have been improved.
+Analyze your last game and identify one move that could have been improved.
 --------------------------------------------------

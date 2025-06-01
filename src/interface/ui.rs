@@ -232,6 +232,28 @@ impl UI {
         Ok(())
     }
 
+    fn render_local_mode_indicator(&self, stdout: &mut io::Stdout) -> io::Result<()> {
+        // Calculate position similar to loading animation
+        if let Ok((_width, _)) = size() {
+            let board_width = get_board_width();
+            let board_offset = get_centering_offset();
+
+            let message = "Local Mode (2 Player)";
+            let message_len = message.len();
+            let x_pos = board_offset + board_width - message_len - 1;
+            let y_pos = 1; // Same position as loading animation
+
+            stdout.queue(cursor::SavePosition)?;
+            stdout.queue(cursor::MoveTo(x_pos as u16, y_pos))?;
+            stdout.queue(Clear(ClearType::UntilNewLine))?;
+            stdout.queue(SetForegroundColor(Color::Cyan))?;
+            stdout.queue(Print(message))?;
+            stdout.queue(ResetColor)?;
+            stdout.queue(cursor::RestorePosition)?;
+        }
+        Ok(())
+    }
+
     fn render_game_status(&self, stdout: &mut io::Stdout, game: &CheckersGame) -> io::Result<()> {
         let offset = get_centering_offset();
 
@@ -247,7 +269,7 @@ impl UI {
         stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
 
-        // Current player and piece counts
+        // Current player
         if offset > 0 {
             write!(stdout, "{}", " ".repeat(offset))?;
         }
@@ -262,10 +284,7 @@ impl UI {
         stdout.queue(SetAttribute(Attribute::Reset))?;
         stdout.queue(ResetColor)?;
 
-        // Removed AI thinking message due to rendering issues
         stdout.write_all(b"\n\r")?;
-
-        // Don't show game over message here - it will be shown after the board
 
         Ok(())
     }
@@ -289,7 +308,7 @@ impl UI {
         }
         write!(
             stdout,
-            "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit"
+            "Controls: ↑↓←→ Move | Space/Enter Select | H Hint | Q/Esc Quit"
         )?;
         stdout.write_all(b"\n\r")?;
 
@@ -338,7 +357,81 @@ impl UI {
         Ok(())
     }
 
+    pub fn render_hint(&self, stdout: &mut io::Stdout, hint: &str) -> io::Result<()> {
+        let offset = get_centering_offset();
+
+        stdout.write_all(b"\n\r")?;
+        if offset > 0 {
+            write!(stdout, "{}", " ".repeat(offset))?;
+        }
+        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
+        write!(
+            stdout,
+            "───────────────────────────────────────────────────────────"
+        )?;
+        stdout.queue(ResetColor)?;
+        stdout.write_all(b"\n\r")?;
+
+        // Split hint into lines if it's too long
+        let max_width = 59; // Board width
+        let words: Vec<&str> = hint.split_whitespace().collect();
+        let mut current_line = String::new();
+        let mut lines = Vec::new();
+
+        for word in words {
+            if current_line.len() + word.len() + 1 > max_width && !current_line.is_empty() {
+                lines.push(current_line);
+                current_line = String::new();
+            }
+            if !current_line.is_empty() {
+                current_line.push(' ');
+            }
+            current_line.push_str(word);
+        }
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        // Display hint with icon
+        for (i, line) in lines.iter().enumerate() {
+            if offset > 0 {
+                write!(stdout, "{}", " ".repeat(offset))?;
+            }
+            if i == 0 {
+                stdout.queue(SetForegroundColor(Color::Yellow))?;
+                write!(stdout, "💡 ")?;
+                stdout.queue(SetForegroundColor(Color::Cyan))?;
+                write!(stdout, "{}", line)?;
+            } else {
+                write!(stdout, "   {}", line)?;
+            }
+            stdout.queue(ResetColor)?;
+            stdout.write_all(b"\n\r")?;
+        }
+
+        Ok(())
+    }
+
+    #[allow(dead_code)]
     pub fn render_game(&mut self, game: &CheckersGame) -> io::Result<()> {
+        self.render_game_with_hint(game, None)
+    }
+
+    #[allow(dead_code)]
+    pub fn render_game_with_hint(
+        &mut self,
+        game: &CheckersGame,
+        hint: Option<&str>,
+    ) -> io::Result<()> {
+        self.render_game_with_hint_and_mode(game, hint, false)
+    }
+
+    pub fn render_game_with_hint_and_mode(
+        &mut self,
+        game: &CheckersGame,
+        hint: Option<&str>,
+        ai_enabled: bool,
+    ) -> io::Result<()> {
         let mut stdout = stdout();
 
         // Queue all operations first to minimize flicker
@@ -352,6 +445,12 @@ impl UI {
         stdout.queue(cursor::MoveTo(0, 0))?;
 
         self.render_game_status(&mut stdout, game)?;
+
+        // Show "Local Mode (2 Player)" when AI is not enabled and not thinking
+        if !ai_enabled && !game.ai_thinking {
+            self.render_local_mode_indicator(&mut stdout)?;
+        }
+
         stdout.write_all(b"\n\r")?;
         Self::render_column_headers(&mut stdout, game.board.size)?;
         self.render_board_rows(&mut stdout, game)?;
@@ -359,6 +458,11 @@ impl UI {
         // Show controls only if game is not over
         if !game.is_game_over {
             self.render_controls(&mut stdout)?;
+
+            // Show hint if available
+            if let Some(hint_text) = hint {
+                self.render_hint(&mut stdout, hint_text)?;
+            }
         }
 
         // Show game over message after the board

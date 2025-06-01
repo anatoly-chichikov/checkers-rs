@@ -36,6 +36,7 @@ pub async fn explain_rules() -> Result<String, AIError> {
     dotenv::dotenv().ok();
 
     let api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
+    let model = env::var("GEMINI_MODEL").map_err(|_| AIError::NoModel)?;
 
     let (running, loading_thread) = start_loading_animation()?;
 
@@ -53,8 +54,8 @@ pub async fn explain_rules() -> Result<String, AIError> {
     };
 
     let api_url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={}",
-        api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
     );
 
     let response = client
@@ -138,8 +139,13 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
     }
 
     let prompt = format!(
-        "Current checkers board state:\n{}\nIt is Black's (b/B) turn.\n\nHere are your possible moves:\n{}\n\
-        Please respond with ONLY the number corresponding to your chosen move from the list above. For example, if you choose move 1, respond with '1'.",
+        "You are playing checkers as Black (b/B pieces). Analyze the board and choose your move.\n\n\
+        Current board state:\n{}\n\n\
+        Available moves:\n{}\n\n\
+        IMPORTANT: Respond with ONLY a single number (1, 2, 3, etc.) - nothing else.\n\
+        Do not include any text, explanation, or punctuation.\n\
+        Just the move number.\n\n\
+        Your move number:",
         board_representation,
         moves_str.trim()
     );
@@ -150,14 +156,15 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
             parts: vec![Part { text: prompt }],
         }],
         generation_config: GenerationConfig {
-            temperature: 0.5,
-            max_output_tokens: 10,
+            temperature: 0.1,     // Lower temperature for more deterministic responses
+            max_output_tokens: 5, // We only need a single digit
         },
     };
 
+    let model = env::var("GEMINI_MODEL").map_err(|_| AIError::NoModel)?;
     let api_url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={}",
-        api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
     );
 
     let (running, loading_thread) = start_loading_animation()?;
@@ -192,10 +199,17 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
     if let Some(candidate) = response_data.candidates.first() {
         if let Some(part) = candidate.content.parts.first() {
             let text_response = part.text.trim();
+
+            // Debug: Print what AI returned
+            eprintln!("AI raw response: '{}'", text_response);
+
             let cleaned_response = text_response
                 .chars()
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>();
+
+            eprintln!("AI cleaned response: '{}'", cleaned_response);
+
             match cleaned_response.parse::<usize>() {
                 Ok(move_number) if move_number > 0 && move_number <= possible_moves.len() => {
                     let chosen_move_data = &possible_moves[move_number - 1];

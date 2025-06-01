@@ -1,5 +1,6 @@
 pub mod error;
 pub mod gemini_client;
+pub mod hint;
 pub mod models;
 pub mod ui;
 
