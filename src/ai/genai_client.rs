@@ -11,6 +11,7 @@ use crate::core::game::CheckersGame;
 use crate::core::game_logic::get_all_valid_moves_for_player;
 use crate::core::piece::Color as PieceColor;
 use crate::interface::messages;
+use crate::utils::prompts::get_ai_move_prompt;
 
 fn format_square(row: usize, col: usize) -> String {
     format!("{}{}", (col as u8 + b'A') as char, row + 1)
@@ -109,17 +110,10 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
         moves_str.push('\n');
     }
 
-    let prompt = format!(
-        "You are playing checkers as Black (b/B pieces). Analyze the board and choose your move.\n\n\
-        Current board state:\n{}\n\n\
-        Available moves:\n{}\n\n\
-        IMPORTANT: Respond with ONLY a single number (1, 2, 3, etc.) - nothing else.\n\
-        Do not include any text, explanation, or punctuation.\n\
-        Just the move number.\n\n\
-        Your move number:",
-        board_representation,
-        moves_str.trim()
-    );
+    let prompt_template = get_ai_move_prompt();
+    let prompt = prompt_template
+        .replace("{board_state}", &board_representation)
+        .replace("{available_moves}", moves_str.trim());
 
     // Create client with the API key set in environment
     env::set_var("GEMINI_API_KEY", api_key);
@@ -146,15 +140,10 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
         Some(text_response) => {
             let text_response = text_response.trim();
 
-            // Debug: Print what AI returned
-            eprintln!("AI raw response: '{}'", text_response);
-
             let cleaned_response = text_response
                 .chars()
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>();
-
-            eprintln!("AI cleaned response: '{}'", cleaned_response);
 
             match cleaned_response.parse::<usize>() {
                 Ok(move_number) if move_number > 0 && move_number <= possible_moves.len() => {

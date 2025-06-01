@@ -319,7 +319,7 @@ impl UI {
     fn render_controls(&self, stdout: &mut io::Stdout) -> io::Result<()> {
         let offset = get_centering_offset();
 
-        // Controls section
+        // Add separator line
         stdout.write_all(b"\n\r")?;
         if offset > 0 {
             write!(stdout, "{}", " ".repeat(offset))?;
@@ -329,14 +329,19 @@ impl UI {
             stdout,
             "───────────────────────────────────────────────────────────"
         )?;
+        stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
+
+        // Controls text in dark grey (same as separator)
         if offset > 0 {
             write!(stdout, "{}", " ".repeat(offset))?;
         }
+        stdout.queue(SetForegroundColor(Color::DarkGrey))?;
         write!(
             stdout,
-            "Controls: ↑↓←→ Move | Space/Enter Select | H Hint | Q/Esc Quit"
+            "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit"
         )?;
+        stdout.queue(ResetColor)?;
         stdout.write_all(b"\n\r")?;
 
         Ok(())
@@ -430,9 +435,11 @@ impl UI {
                 stdout.queue(SetForegroundColor(Color::Cyan))?;
                 write!(stdout, "{}", line)?;
             } else {
+                stdout.queue(SetForegroundColor(Color::Cyan))?;
                 write!(stdout, "   {}", line)?;
             }
             stdout.queue(ResetColor)?;
+            stdout.queue(Clear(ClearType::UntilNewLine))?; // Clear to end of line
             stdout.write_all(b"\n\r")?;
         }
 
@@ -484,17 +491,23 @@ impl UI {
 
         // Show controls only if game is not over
         if !game.is_game_over {
-            // Show AI error if available (above controls)
+            // Show AI error if available
             if let Some(error_text) = &game.ai_error {
                 self.render_ai_error(&mut stdout, error_text)?;
             }
 
-            self.render_controls(&mut stdout)?;
+            // Save cursor position and clear the area below the board
+            // This prevents artifacts when hint changes size
+            stdout.queue(cursor::SavePosition)?;
+            stdout.queue(Clear(ClearType::FromCursorDown))?;
+            stdout.queue(cursor::RestorePosition)?;
 
-            // Show hint if available
+            // Show hint if available (before controls)
             if let Some(hint_text) = hint {
                 self.render_hint(&mut stdout, hint_text)?;
             }
+
+            self.render_controls(&mut stdout)?;
         }
 
         // Show game over message after the board
