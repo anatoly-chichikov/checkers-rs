@@ -1,6 +1,7 @@
 mod ai;
 mod core;
 mod interface;
+mod utils;
 
 use crossterm::{
     cursor::{self, Show},
@@ -158,7 +159,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         } else {
                                             game.ai_error = None; // Clear AI error on successful player move
                                             check_and_set_game_over(&mut game);
-                                            current_hint = None; // Clear hint after move
                                         }
                                         needs_render = true;
                                     }
@@ -169,32 +169,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
-                    }
-                }
-                GameInput::Hint => {
-                    if let Some(ref provider) = hint_provider {
-                        if game.current_player == PieceColor::White && !game.is_game_over {
-                            // Get hint asynchronously
-                            match provider
-                                .get_hint(&game.board, game.current_player, &game.move_history)
-                                .await
-                            {
-                                Ok(hint) => {
-                                    current_hint = Some(hint);
-                                    needs_render = true;
-                                }
-                                Err(e) => {
-                                    current_hint = Some(format!("Unable to get hint: {}", e));
-                                    needs_render = true;
-                                }
-                            }
-                        }
-                    } else {
-                        current_hint = Some(
-                            "Hints require GEMINI_API_KEY and GEMINI_MODEL in .env file"
-                                .to_string(),
-                        );
-                        needs_render = true;
                     }
                 }
                 GameInput::Quit => break,
@@ -229,7 +203,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
                             game.ai_error = None; // Clear AI error on successful move
                             check_and_set_game_over(&mut game);
-                            current_hint = None; // Clear hint after move
+
+                            // Automatically update hint after AI move
+                            if let Some(ref provider) = hint_provider {
+                                if game.current_player == PieceColor::White && !game.is_game_over {
+                                    match provider
+                                        .get_hint(
+                                            &game.board,
+                                            PieceColor::White,
+                                            &game.move_history,
+                                        )
+                                        .await
+                                    {
+                                        Ok(hint) => {
+                                            current_hint = Some(hint);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Failed to get hint after AI move: {}", e);
+                                            current_hint = None;
+                                        }
+                                    }
+                                } else {
+                                    current_hint = None;
+                                }
+                            } else {
+                                current_hint = None;
+                            }
                         }
                     }
                 }

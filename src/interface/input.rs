@@ -5,7 +5,6 @@ use std::io;
 pub enum GameInput {
     MoveCursor(CursorDirection),
     Select,
-    Hint,
     Quit,
 }
 
@@ -26,7 +25,6 @@ pub fn read_input() -> io::Result<Option<GameInput>> {
                 KeyCode::Left => GameInput::MoveCursor(CursorDirection::Left),
                 KeyCode::Right => GameInput::MoveCursor(CursorDirection::Right),
                 KeyCode::Char(' ') | KeyCode::Enter => GameInput::Select,
-                KeyCode::Char('h') | KeyCode::Char('H') => GameInput::Hint,
                 KeyCode::Char('q')
                 | KeyCode::Char('Q')
                 | KeyCode::Char('й')
