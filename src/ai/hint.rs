@@ -77,9 +77,8 @@ Be concise and educational. Focus on strategy, not just the immediate move.",
             .await
             .map_err(|e| {
                 eprintln!("Hint API error: {:?}", e);
-                Box::new(std::io::Error::other(
-                    format!("API request failed: {}", e),
-                )) as Box<dyn std::error::Error>
+                Box::new(std::io::Error::other(format!("API request failed: {}", e)))
+                    as Box<dyn std::error::Error>
             })?;
 
         match result.content_text_as_str() {
