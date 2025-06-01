@@ -1,8 +1,10 @@
-use reqwest::Client;
+use genai::{
+    chat::{ChatMessage, ChatOptions, ChatRequest},
+    Client,
+};
 use std::env;
 
 use crate::ai::error::AIError;
-use crate::ai::models::{Content, GeminiRequest, GeminiResponse, GenerationConfig, Part};
 use crate::ai::ui::{start_loading_animation, stop_loading_animation};
 use crate::core::board::Board;
 use crate::core::game::CheckersGame;
@@ -40,67 +42,36 @@ pub async fn explain_rules() -> Result<String, AIError> {
 
     let (running, loading_thread) = start_loading_animation()?;
 
-    let client = Client::new();
-    let request = GeminiRequest {
-        contents: vec![Content {
-            parts: vec![Part {
-                text: messages::STORY_PROMPT.to_string(),
-            }],
-        }],
-        generation_config: GenerationConfig {
-            temperature: 0.7,
-            max_output_tokens: 512,
-        },
-    };
+    // Create client with the API key set in environment
+    env::set_var("GEMINI_API_KEY", api_key);
+    let client = Client::default();
 
-    let api_url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
-    );
+    let chat_req = ChatRequest::new(vec![ChatMessage::user(messages::STORY_PROMPT)]);
 
-    let response = client
-        .post(&api_url)
-        .header("Content-Type", "application/json")
-        .json(&request)
-        .send()
-        .await
-        .map_err(|e| AIError::RequestFailed(e.to_string()))?;
+    let chat_options = ChatOptions::default()
+        .with_temperature(0.7)
+        .with_max_tokens(512);
+
+    let result = client
+        .exec_chat(&model, chat_req, Some(&chat_options))
+        .await;
 
     stop_loading_animation(running, loading_thread)?;
 
-    let status = response.status();
-    if !status.is_success() {
-        let error_body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!(
-            "API request failed with status {}: {}",
-            status, error_body
-        )));
-    }
+    let result = result.map_err(|e| AIError::RequestFailed(e.to_string()))?;
 
-    let response_data: GeminiResponse = response
-        .json()
-        .await
-        .map_err(|e| AIError::ParseError(e.to_string()))?;
-
-    if let Some(candidate) = response_data.candidates.first() {
-        if let Some(part) = candidate.content.parts.first() {
+    match result.content_text_as_str() {
+        Some(text) => {
             // Remove HTML tags from the response
-            let cleaned_text = part
-                .text
+            let cleaned_text = text
                 .replace("<br>", "\n")
                 .replace("<br/>", "\n")
                 .replace("<br />", "\n");
             Ok(cleaned_text)
-        } else {
-            Err(AIError::ParseError(
-                "No parts in candidate content".to_string(),
-            ))
         }
-    } else {
-        Err(AIError::ParseError("No candidates in response".to_string()))
+        None => Err(AIError::ParseError(
+            "No text content in response".to_string(),
+        )),
     }
 }
 
@@ -150,55 +121,30 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
         moves_str.trim()
     );
 
-    let client = Client::new();
-    let request = GeminiRequest {
-        contents: vec![Content {
-            parts: vec![Part { text: prompt }],
-        }],
-        generation_config: GenerationConfig {
-            temperature: 0.1,     // Lower temperature for more deterministic responses
-            max_output_tokens: 5, // We only need a single digit
-        },
-    };
-
+    // Create client with the API key set in environment
+    env::set_var("GEMINI_API_KEY", api_key);
+    let client = Client::default();
     let model = env::var("GEMINI_MODEL").map_err(|_| AIError::NoModel)?;
-    let api_url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
-    );
+
+    let chat_req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
+
+    let chat_options = ChatOptions::default()
+        .with_temperature(0.1) // Lower temperature for more deterministic responses
+        .with_max_tokens(5); // We only need a single digit
 
     let (running, loading_thread) = start_loading_animation()?;
 
-    let response = client
-        .post(&api_url)
-        .header("Content-Type", "application/json")
-        .json(&request)
-        .send()
-        .await
-        .map_err(|e| AIError::RequestFailed(e.to_string()))?;
+    let result = client
+        .exec_chat(&model, chat_req, Some(&chat_options))
+        .await;
 
     stop_loading_animation(running, loading_thread)?;
 
-    let status = response.status();
-    if !status.is_success() {
-        let error_body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(AIError::RequestFailed(format!(
-            "API request failed with status {}: {}",
-            status, error_body
-        )));
-    }
+    let result = result.map_err(|e| AIError::RequestFailed(e.to_string()))?;
 
-    let response_data: GeminiResponse = response
-        .json()
-        .await
-        .map_err(|e| AIError::ParseError(format!("Failed to parse JSON response: {}", e)))?;
-
-    if let Some(candidate) = response_data.candidates.first() {
-        if let Some(part) = candidate.content.parts.first() {
-            let text_response = part.text.trim();
+    match result.content_text_as_str() {
+        Some(text_response) => {
+            let text_response = text_response.trim();
 
             // Debug: Print what AI returned
             eprintln!("AI raw response: '{}'", text_response);
@@ -226,12 +172,9 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
                     text_response, cleaned_response
                 ))),
             }
-        } else {
-            Err(AIError::ParseError(
-                "No parts in candidate content".to_string(),
-            ))
         }
-    } else {
-        Err(AIError::ParseError("No candidates in response".to_string()))
+        None => Err(AIError::ParseError(
+            "No text content in response".to_string(),
+        )),
     }
 }

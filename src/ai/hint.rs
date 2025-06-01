@@ -1,6 +1,8 @@
 use crate::core::{board::Board, move_history::MoveHistory, piece::Color as PieceColor};
-use reqwest::Client;
-use serde_json::json;
+use genai::{
+    chat::{ChatMessage, ChatOptions, ChatRequest},
+    Client,
+};
 use std::env;
 
 fn format_board(board: &Board) -> String {
@@ -22,22 +24,15 @@ fn format_board(board: &Board) -> String {
 }
 
 pub struct HintProvider {
-    client: Client,
-    url: String,
+    api_key: String,
+    model: String,
 }
 
 impl HintProvider {
     pub fn new(api_key: String) -> Result<Self, String> {
         let model = env::var("GEMINI_MODEL")
             .map_err(|_| "GEMINI_MODEL environment variable is required")?;
-        let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-            model, api_key
-        );
-        Ok(Self {
-            client: Client::new(),
-            url,
-        })
+        Ok(Self { api_key, model })
     }
 
     pub async fn get_hint(
@@ -67,36 +62,31 @@ Be concise and educational. Focus on strategy, not just the immediate move.",
             if move_history.is_empty() { "No moves yet" } else { &move_history }
         );
 
-        let request_body = json!({
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 150,
+        // Set API key in environment for genai client
+        env::set_var("GEMINI_API_KEY", &self.api_key);
+        let client = Client::default();
+
+        let chat_req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
+
+        let chat_options = ChatOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(150);
+
+        let result = client
+            .exec_chat(&self.model, chat_req, Some(&chat_options))
+            .await
+            .map_err(|e| {
+                eprintln!("Hint API error: {:?}", e);
+                Box::new(std::io::Error::other(format!("API request failed: {}", e)))
+                    as Box<dyn std::error::Error>
+            })?;
+
+        match result.content_text_as_str() {
+            Some(text) => Ok(text.trim().to_string()),
+            None => {
+                eprintln!("Hint response has no text content");
+                Err("Failed to parse hint from API response".into())
             }
-        });
-
-        let response = self
-            .client
-            .post(&self.url)
-            .header("Content-Type", "application/json")
-            .json(&request_body)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            return Err(format!("API request failed: {}", response.status()).into());
-        }
-
-        let response_json: serde_json::Value = response.json().await?;
-
-        if let Some(text) = response_json["candidates"][0]["content"]["parts"][0]["text"].as_str() {
-            Ok(text.trim().to_string())
-        } else {
-            Err("Failed to parse hint from API response".into())
         }
     }
 }

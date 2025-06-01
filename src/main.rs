@@ -156,6 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         if let Err(_e) = move_result {
                                             // Error will be visible in UI
                                         } else {
+                                            game.ai_error = None; // Clear AI error on successful player move
                                             check_and_set_game_over(&mut game);
                                             current_hint = None; // Clear hint after move
                                         }
@@ -226,13 +227,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 game.switch_player();
                             }
                         } else {
+                            game.ai_error = None; // Clear AI error on successful move
                             check_and_set_game_over(&mut game);
                             current_hint = None; // Clear hint after move
                         }
                     }
                 }
-                Err(_ai_error) => {
+                Err(ai_error) => {
                     game.ai_thinking = false;
+                    game.ai_error = Some(format!("AI Error: {}", ai_error));
                     game.switch_player();
                 }
             }
