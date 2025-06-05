@@ -1,11 +1,12 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::Widget,
 };
 
 use crate::core::{board::Board, piece::Color as PieceColor};
+use crate::interface::theme::Theme;
 
 pub struct CheckerBoard<'a> {
     board: &'a Board,
@@ -45,7 +46,7 @@ impl<'a> CheckerBoard<'a> {
 
         // Determine cell background
         let cell_style = if is_possible_move {
-            Style::default().bg(Color::Red)
+            Style::default().bg(Theme::POSSIBLE_MOVE)
         } else {
             Style::default()
         };
@@ -75,9 +76,9 @@ impl<'a> CheckerBoard<'a> {
 
         // Render content
         let content_style = match piece {
-            Some(p) if p.color == PieceColor::Black => cell_style.fg(Color::Red),
-            Some(p) if p.color == PieceColor::White => cell_style.fg(Color::White),
-            None if !is_playable => cell_style.fg(Color::Magenta),
+            Some(p) if p.color == PieceColor::Black => cell_style.fg(Theme::PIECE_BLACK),
+            Some(p) if p.color == PieceColor::White => cell_style.fg(Theme::PIECE_WHITE),
+            None if !is_playable => cell_style.fg(Theme::BOARD_LIGHT),
             _ => cell_style,
         };
 
@@ -104,22 +105,22 @@ impl<'a> CheckerBoard<'a> {
 impl<'a> Widget for CheckerBoard<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // Grid dimensions
-        const CELL_WIDTH: u16 = 6;  // 5 content + 1 border
+        const CELL_WIDTH: u16 = 6; // 5 content + 1 border
         const CELL_HEIGHT: u16 = 2; // 1 content + 1 border
         const LABEL_WIDTH: u16 = 4; // Row labels width
-        
+
         // Calculate total grid size (9x9 including labels)
         let grid_width = LABEL_WIDTH + CELL_WIDTH * 8 + 1; // +1 for final border
         let grid_height = 1 + CELL_HEIGHT * 8 + 1; // 1 for column labels, +1 for final border
-        
+
         if area.width < grid_width || area.height < grid_height {
             return; // Not enough space
         }
-        
+
         // Center the entire grid
         let x_start = (area.width.saturating_sub(grid_width)) / 2 + area.x;
         let y_start = (area.height.saturating_sub(grid_height)) / 4 + area.y; // 1/4 vertical offset
-        
+
         // Draw column labels row
         buf.set_string(
             x_start,
@@ -127,43 +128,44 @@ impl<'a> Widget for CheckerBoard<'a> {
             "    ", // Empty space for row label column
             Style::default(),
         );
-        
+
         for col in 0..8 {
             let x = x_start + LABEL_WIDTH + col * CELL_WIDTH + CELL_WIDTH / 2;
             buf.set_string(
                 x,
                 y_start,
                 &format!("{}", (b'A' + col as u8) as char),
-                Style::default().fg(Color::White),
+                Style::default().fg(Theme::TEXT_SECONDARY),
             );
         }
-        
+
         // Draw board rows with labels
         for row in 0..8 {
             let y_base = y_start + 1 + row * CELL_HEIGHT;
-            
+
             // Draw row label
             let row_label = format!("{:>2} ", 8 - row);
             buf.set_string(
                 x_start,
                 y_base + CELL_HEIGHT / 2,
                 &row_label,
-                Style::default().fg(Color::White),
+                Style::default().fg(Theme::TEXT_SECONDARY),
             );
-            
+
             // Draw cells in this row
             for col in 0..8 {
                 let x_pos = x_start + LABEL_WIDTH + col * CELL_WIDTH;
                 let y_pos = y_base;
 
                 // Draw cell borders
-                let (tl, t, tr, l, r, bl, b, br, _) = self.get_border_chars(row as usize, col as usize);
+                let (tl, t, tr, l, r, bl, b, br, _) =
+                    self.get_border_chars(row as usize, col as usize);
                 let border_style = if (row as usize, col as usize) == self.cursor_pos {
                     Style::default()
-                        .fg(Color::White)
+                        .fg(Theme::BORDER_FOCUSED)
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(Color::Magenta)
+                    Style::default().fg(Theme::BORDER)
                 };
 
                 // Top border
@@ -185,7 +187,8 @@ impl<'a> Widget for CheckerBoard<'a> {
                 }
 
                 // Bottom border
-                if row == 7 || (row + 1 < 8 && (row as usize + 1, col as usize) == self.cursor_pos) {
+                if row == 7 || (row + 1 < 8 && (row as usize + 1, col as usize) == self.cursor_pos)
+                {
                     buf.set_string(x_pos, y_pos + CELL_HEIGHT, &bl.to_string(), border_style);
                     for i in 1..CELL_WIDTH {
                         buf.set_string(
@@ -215,7 +218,7 @@ impl<'a> Widget for CheckerBoard<'a> {
                         x_pos + CELL_WIDTH,
                         y_pos + CELL_HEIGHT,
                         "┼",
-                        Style::default().fg(Color::Magenta),
+                        Style::default().fg(Theme::BORDER),
                     );
                 }
             }

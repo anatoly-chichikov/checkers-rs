@@ -13,7 +13,10 @@ use ratatui::{
 use crate::{
     ai::Hint,
     core::{game::CheckersGame, piece::Color},
-    interface::widgets::{CheckerBoard, GameStatus, HintDisplay, WelcomeScreen},
+    interface::{
+        theme::Theme,
+        widgets::{CheckerBoard, GameStatus, HintDisplay, WelcomeScreen},
+    },
 };
 
 #[derive(Debug, PartialEq)]
@@ -120,8 +123,7 @@ impl UI {
 
             // Top separator
             let separator = "═".repeat(64);
-            let sep_widget =
-                Paragraph::new(separator).style(Style::default().fg(RatatuiColor::Magenta));
+            let sep_widget = Paragraph::new(separator).style(Style::default().fg(Theme::SEPARATOR));
             f.render_widget(sep_widget, chunks[0]);
 
             // Game status - no padding, aligned within the 60-char column
@@ -141,13 +143,13 @@ impl UI {
             // Bottom separator
             let bottom_sep = "─".repeat(64);
             let bottom_sep_widget =
-                Paragraph::new(bottom_sep).style(Style::default().fg(RatatuiColor::Magenta));
+                Paragraph::new(bottom_sep).style(Style::default().fg(Theme::SEPARATOR));
             f.render_widget(bottom_sep_widget, chunks[3]);
 
             // Controls
             let controls = "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit";
             let controls_widget = Paragraph::new(controls)
-                .style(Style::default().fg(RatatuiColor::White))
+                .style(Style::default().fg(Theme::TEXT_SECONDARY))
                 .alignment(Alignment::Center);
             f.render_widget(controls_widget, chunks[4]);
 

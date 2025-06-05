@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::core::piece::Color;
+use crate::interface::theme::Theme;
 
 pub struct GameStatus<'a> {
     current_player: Color,
@@ -52,14 +53,14 @@ impl<'a> Widget for GameStatus<'a> {
         };
         lines.push(Line::from(Span::styled(
             turn_text,
-            Style::default().fg(RatatuiColor::White),
+            Style::default().fg(Theme::TEXT_PRIMARY),
         )));
 
         // Local mode indicator
         if self.is_local_mode {
             lines.push(Line::from(Span::styled(
                 "[LOCAL MODE - Playing against another human]",
-                Style::default().fg(RatatuiColor::Cyan),
+                Style::default().fg(Theme::TEXT_ACCENT),
             )));
         }
 
