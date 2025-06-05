@@ -18,7 +18,6 @@ impl Theme {
     pub const PIECE_WHITE: Color = Color::Rgb(230, 230, 220); // Cream white
 
     // Board colors
-    pub const BOARD_DARK: Color = Color::Rgb(80, 80, 80); // Dark squares
     pub const BOARD_LIGHT: Color = Color::Rgb(60, 60, 60); // Pattern on light squares
     pub const POSSIBLE_MOVE: Color = Color::Rgb(120, 140, 100); // Soft olive green
 

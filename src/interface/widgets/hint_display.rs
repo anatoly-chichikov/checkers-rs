@@ -31,13 +31,25 @@ impl<'a> Widget for HintDisplay<'a> {
                 .border_style(Style::default().fg(Theme::BORDER))
                 .title(Line::from(title));
 
+            // Calculate inner area for padding
+            let inner = block.inner(area);
+            let padded_area = Rect {
+                x: inner.x + 1,
+                y: inner.y,
+                width: inner.width.saturating_sub(2),
+                height: inner.height,
+            };
+
+            // First render the block
+            block.render(area, buf);
+
+            // Then render the paragraph without block in the padded area
             let paragraph = Paragraph::new(Text::from(hint_text))
-                .block(block)
                 .wrap(Wrap { trim: true })
                 .style(Style::default().fg(Theme::TEXT_PRIMARY))
                 .alignment(Alignment::Left);
 
-            paragraph.render(area, buf);
+            paragraph.render(padded_area, buf);
         }
     }
 }

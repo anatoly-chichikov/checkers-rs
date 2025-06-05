@@ -134,7 +134,7 @@ impl<'a> Widget for CheckerBoard<'a> {
             buf.set_string(
                 x,
                 y_start,
-                &format!("{}", (b'A' + col as u8) as char),
+                format!("{}", (b'A' + col as u8) as char),
                 Style::default().fg(Theme::TEXT_SECONDARY),
             );
         }
@@ -157,69 +157,127 @@ impl<'a> Widget for CheckerBoard<'a> {
                 let x_pos = x_start + LABEL_WIDTH + col * CELL_WIDTH;
                 let y_pos = y_base;
 
-                // Draw cell borders
-                let (tl, t, tr, l, r, bl, b, br, _) =
-                    self.get_border_chars(row as usize, col as usize);
-                let border_style = if (row as usize, col as usize) == self.cursor_pos {
-                    Style::default()
+                // Check if this cell has cursor
+                let is_cursor_cell = (row as usize, col as usize) == self.cursor_pos;
+                
+                if is_cursor_cell {
+                    // Draw complete box with double lines for cursor
+                    let cursor_style = Style::default()
                         .fg(Theme::BORDER_FOCUSED)
-                        .add_modifier(Modifier::BOLD)
+                        .add_modifier(Modifier::BOLD);
+                    
+                    // Top border
+                    buf.set_string(x_pos, y_pos, "╔", cursor_style);
+                    for i in 1..CELL_WIDTH {
+                        buf.set_string(x_pos + i, y_pos, "═", cursor_style);
+                    }
+                    buf.set_string(x_pos + CELL_WIDTH, y_pos, "╗", cursor_style);
+                    
+                    // Side borders
+                    buf.set_string(x_pos, y_pos + 1, "║", cursor_style);
+                    buf.set_string(x_pos + CELL_WIDTH, y_pos + 1, "║", cursor_style);
+                    
+                    // Bottom border
+                    buf.set_string(x_pos, y_pos + CELL_HEIGHT, "╚", cursor_style);
+                    for i in 1..CELL_WIDTH {
+                        buf.set_string(x_pos + i, y_pos + CELL_HEIGHT, "═", cursor_style);
+                    }
+                    buf.set_string(x_pos + CELL_WIDTH, y_pos + CELL_HEIGHT, "╝", cursor_style);
+                    
+                    // Render cell content
+                    self.render_cell(buf, x_pos + 1, y_pos + 1, row as usize, col as usize);
                 } else {
-                    Style::default().fg(Theme::BORDER)
-                };
-
-                // Top border
-                if row == 0 || (row as usize, col as usize) == self.cursor_pos {
-                    buf.set_string(x_pos, y_pos, &tl.to_string(), border_style);
-                    for i in 1..CELL_WIDTH {
-                        buf.set_string(x_pos + i, y_pos, &t.to_string(), border_style);
+                    // Normal cell - draw borders only where needed
+                    let (tl, t, tr, l, r, bl, b, br, _) =
+                        self.get_border_chars(row as usize, col as usize);
+                    let border_style = Style::default().fg(Theme::BORDER);
+                    
+                    // Top border (only for first row)
+                    if row == 0 {
+                        buf.set_string(x_pos, y_pos, tl.to_string(), border_style);
+                        for i in 1..CELL_WIDTH {
+                            buf.set_string(x_pos + i, y_pos, t.to_string(), border_style);
+                        }
+                        if col == 7 {
+                            buf.set_string(x_pos + CELL_WIDTH, y_pos, tr.to_string(), border_style);
+                        }
                     }
+                    
+                    // Left border (only for first column)
+                    if col == 0 {
+                        buf.set_string(x_pos, y_pos + 1, l.to_string(), border_style);
+                    }
+                    
+                    // Right border (only for last column)
                     if col == 7 {
-                        buf.set_string(x_pos + CELL_WIDTH, y_pos, &tr.to_string(), border_style);
+                        buf.set_string(x_pos + CELL_WIDTH, y_pos + 1, r.to_string(), border_style);
                     }
+                    
+                    // Bottom border (only for last row)
+                    if row == 7 {
+                        buf.set_string(x_pos, y_pos + CELL_HEIGHT, bl.to_string(), border_style);
+                        for i in 1..CELL_WIDTH {
+                            buf.set_string(
+                                x_pos + i,
+                                y_pos + CELL_HEIGHT,
+                                b.to_string(),
+                                border_style,
+                            );
+                        }
+                        if col == 7 {
+                            buf.set_string(
+                                x_pos + CELL_WIDTH,
+                                y_pos + CELL_HEIGHT,
+                                br.to_string(),
+                                border_style,
+                            );
+                        }
+                    }
+                    
+                    // Render cell content
+                    self.render_cell(buf, x_pos + 1, y_pos + 1, row as usize, col as usize);
                 }
 
-                // Side borders and content
-                buf.set_string(x_pos, y_pos + 1, &l.to_string(), border_style);
-                self.render_cell(buf, x_pos + 1, y_pos + 1, row as usize, col as usize);
-                if col == 7 {
-                    buf.set_string(x_pos + CELL_WIDTH, y_pos + 1, &r.to_string(), border_style);
-                }
-
-                // Bottom border
-                if row == 7 || (row + 1 < 8 && (row as usize + 1, col as usize) == self.cursor_pos)
-                {
-                    buf.set_string(x_pos, y_pos + CELL_HEIGHT, &bl.to_string(), border_style);
-                    for i in 1..CELL_WIDTH {
-                        buf.set_string(
-                            x_pos + i,
-                            y_pos + CELL_HEIGHT,
-                            &b.to_string(),
-                            border_style,
-                        );
+                // Intersections and internal borders (skip if cursor is involved)
+                if !is_cursor_cell {
+                    // Horizontal border between cells
+                    if row < 7 && (row as usize + 1, col as usize) != self.cursor_pos {
+                        // Bottom border of current cell / top border of next cell
+                        if col == 0 {
+                            buf.set_string(x_pos, y_pos + CELL_HEIGHT, "├", Style::default().fg(Theme::BORDER));
+                        }
+                        for i in 1..CELL_WIDTH {
+                            buf.set_string(x_pos + i, y_pos + CELL_HEIGHT, "─", Style::default().fg(Theme::BORDER));
+                        }
+                        if col == 7 {
+                            buf.set_string(x_pos + CELL_WIDTH, y_pos + CELL_HEIGHT, "┤", Style::default().fg(Theme::BORDER));
+                        }
                     }
-                    if col == 7 {
+                    
+                    // Vertical border between cells
+                    if col < 7 && (row as usize, col as usize + 1) != self.cursor_pos {
+                        if row == 0 {
+                            buf.set_string(x_pos + CELL_WIDTH, y_pos, "┬", Style::default().fg(Theme::BORDER));
+                        }
+                        buf.set_string(x_pos + CELL_WIDTH, y_pos + 1, "│", Style::default().fg(Theme::BORDER));
+                        if row == 7 {
+                            buf.set_string(x_pos + CELL_WIDTH, y_pos + CELL_HEIGHT, "┴", Style::default().fg(Theme::BORDER));
+                        }
+                    }
+                    
+                    // Intersection
+                    if row < 7 && col < 7 
+                        && (row as usize + 1, col as usize) != self.cursor_pos
+                        && (row as usize, col as usize + 1) != self.cursor_pos
+                        && (row as usize + 1, col as usize + 1) != self.cursor_pos
+                    {
                         buf.set_string(
                             x_pos + CELL_WIDTH,
                             y_pos + CELL_HEIGHT,
-                            &br.to_string(),
-                            border_style,
+                            "┼",
+                            Style::default().fg(Theme::BORDER),
                         );
                     }
-                }
-
-                // Intersections
-                if row < 7
-                    && col < 7
-                    && (row as usize, col as usize) != self.cursor_pos
-                    && (row as usize + 1, col as usize) != self.cursor_pos
-                {
-                    buf.set_string(
-                        x_pos + CELL_WIDTH,
-                        y_pos + CELL_HEIGHT,
-                        "┼",
-                        Style::default().fg(Theme::BORDER),
-                    );
                 }
             }
         }

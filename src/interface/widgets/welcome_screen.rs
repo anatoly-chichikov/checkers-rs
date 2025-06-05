@@ -48,7 +48,7 @@ impl WelcomeScreen {
     }
 
     fn render_header(&self, area: Rect, buf: &mut Buffer) {
-        let header_lines = vec![
+        let header_lines = [
             "╔═╗╦ ╦╔═╗╔═╗╦╔═╔═╗╦═╗╔═╗",
             "║  ╠═╣║╣ ║  ╠╩╗║╣ ╠╦╝╚═╗",
             "╚═╝╩ ╩╚═╝╚═╝╩ ╩╚═╝╩╚═╚═╝",
@@ -82,13 +82,25 @@ impl WelcomeScreen {
                 Style::default().fg(Theme::TEXT_ACCENT),
             ));
 
+        // Calculate inner area for padding
+        let inner = block.inner(area);
+        let padded_area = Rect {
+            x: inner.x + 1,
+            y: inner.y,
+            width: inner.width.saturating_sub(2),
+            height: inner.height,
+        };
+
+        // First render the block
+        block.render(area, buf);
+
+        // Then render the paragraph without block in the padded area
         let paragraph = Paragraph::new(Text::from(self.did_you_know.as_str()))
-            .block(block)
             .wrap(Wrap { trim: true })
             .style(Style::default().fg(Theme::TEXT_PRIMARY))
             .alignment(Alignment::Left); // Changed to left alignment
 
-        paragraph.render(area, buf);
+        paragraph.render(padded_area, buf);
     }
 
     fn render_tip_of_the_day(&self, area: Rect, buf: &mut Buffer) {
@@ -99,8 +111,16 @@ impl WelcomeScreen {
 
         let underline = "════════════════";
 
-        // Split content into lines for proper wrapping
-        let wrapped_text = self.wrap_text(&self.tip_of_the_day, 60);
+        // Add horizontal padding
+        let padded_area = Rect {
+            x: area.x + 1,
+            y: area.y,
+            width: area.width.saturating_sub(2),
+            height: area.height,
+        };
+
+        // Split content into lines for proper wrapping with adjusted width
+        let wrapped_text = self.wrap_text(&self.tip_of_the_day, padded_area.width as usize);
         let mut content = vec![
             Line::from(title),
             Line::from(Span::styled(
@@ -118,7 +138,7 @@ impl WelcomeScreen {
 
         let paragraph = Paragraph::new(content).alignment(Alignment::Left); // Changed to left
 
-        paragraph.render(area, buf);
+        paragraph.render(padded_area, buf);
     }
 
     fn render_todays_challenge(&self, area: Rect, buf: &mut Buffer) {
@@ -129,8 +149,16 @@ impl WelcomeScreen {
 
         let underline = "═══════════════════";
 
-        // Split content into lines for proper wrapping
-        let wrapped_text = self.wrap_text(&self.todays_challenge, 60);
+        // Add horizontal padding
+        let padded_area = Rect {
+            x: area.x + 1,
+            y: area.y,
+            width: area.width.saturating_sub(2),
+            height: area.height,
+        };
+
+        // Split content into lines for proper wrapping with adjusted width
+        let wrapped_text = self.wrap_text(&self.todays_challenge, padded_area.width as usize);
         let mut content = vec![
             Line::from(title),
             Line::from(Span::styled(
@@ -148,7 +176,7 @@ impl WelcomeScreen {
 
         let paragraph = Paragraph::new(content).alignment(Alignment::Left); // Changed to left
 
-        paragraph.render(area, buf);
+        paragraph.render(padded_area, buf);
     }
 
     fn render_instructions(&self, area: Rect, buf: &mut Buffer) {
@@ -166,23 +194,24 @@ impl Widget for WelcomeScreen {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
+                Constraint::Length(2), // Space before header (increased)
                 Constraint::Length(3), // Header
-                Constraint::Length(1), // Separator
-                Constraint::Length(1), // Space after separator
-                Constraint::Length(5), // Did You Know
-                Constraint::Length(2), // Space
-                Constraint::Length(6), // Tip of the Day (with underline)
-                Constraint::Length(2), // Space
-                Constraint::Length(6), // Today's Challenge (with underline)
-                Constraint::Min(1),    // Flexible space
+                Constraint::Length(1), // Separator (no space between)
+                Constraint::Length(2), // Space after separator
+                Constraint::Length(4), // Did You Know
+                Constraint::Length(1), // Space
+                Constraint::Length(5), // Tip of the Day
+                Constraint::Length(1), // Space
+                Constraint::Length(5), // Today's Challenge
+                Constraint::Length(2), // Space before instructions
                 Constraint::Length(1), // Instructions
-                Constraint::Length(2), // Bottom padding
+                Constraint::Min(0),    // Remaining space
             ])
             .split(area);
 
         // Render header and separator (keep centered)
-        self.render_header(chunks[0], buf);
-        self.render_separator(chunks[1], buf);
+        self.render_header(chunks[1], buf);
+        self.render_separator(chunks[2], buf);
 
         // Create centered column for content (same as game board)
         let content_width = 64;
@@ -191,31 +220,31 @@ impl Widget for WelcomeScreen {
         // Did You Know block
         let did_you_know_area = Rect {
             x: content_x,
-            y: chunks[3].y,
+            y: chunks[4].y,
             width: content_width.min(area.width),
-            height: chunks[3].height,
+            height: chunks[4].height,
         };
         self.render_did_you_know(did_you_know_area, buf);
 
         // Tip of the Day (in centered column)
         let tip_area = Rect {
             x: content_x,
-            y: chunks[5].y,
+            y: chunks[6].y,
             width: content_width.min(area.width),
-            height: chunks[5].height,
+            height: chunks[6].height,
         };
         self.render_tip_of_the_day(tip_area, buf);
 
         // Today's Challenge (in centered column)
         let challenge_area = Rect {
             x: content_x,
-            y: chunks[7].y,
+            y: chunks[8].y,
             width: content_width.min(area.width),
-            height: chunks[7].height,
+            height: chunks[8].height,
         };
         self.render_todays_challenge(challenge_area, buf);
 
         // Instructions (keep full width for centering)
-        self.render_instructions(chunks[9], buf);
+        self.render_instructions(chunks[10], buf);
     }
 }

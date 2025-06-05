@@ -212,10 +212,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 // No piece selected, try to select one
-                else {
-                    if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
-                        // Selection successful
-                    }
+                else if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
+                    // Selection successful
                 }
             }
             Input::Quit => break,

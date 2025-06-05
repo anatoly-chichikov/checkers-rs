@@ -188,16 +188,28 @@ impl UI {
                 )),
             ];
 
-            let paragraph = Paragraph::new(text)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_style(Style::default().fg(RatatuiColor::Magenta)),
-                )
-                .alignment(Alignment::Center);
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(RatatuiColor::Magenta));
 
             let area = centered_rect(50, 40, f.area());
-            f.render_widget(paragraph, area);
+
+            // Calculate inner area for padding
+            let inner = block.inner(area);
+            let padded_area = Rect {
+                x: inner.x + 1,
+                y: inner.y,
+                width: inner.width.saturating_sub(2),
+                height: inner.height,
+            };
+
+            // First render the block
+            f.render_widget(block, area);
+
+            // Then render the paragraph without block in the padded area
+            let paragraph = Paragraph::new(text).alignment(Alignment::Center);
+
+            f.render_widget(paragraph, padded_area);
         })?;
         Ok(())
     }
