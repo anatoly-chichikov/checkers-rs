@@ -45,23 +45,15 @@ impl<'a> Widget for GameStatus<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut lines = vec![];
 
-        // Current turn indicator
+        // Current turn indicator - Fixed: show actual current player
         let turn_text = match self.current_player {
-            Color::Black => "Current Turn: White",
-            Color::White => "Current Turn: Black",
+            Color::White => "Current Turn: White",
+            Color::Black => "Current Turn: Black",
         };
         lines.push(Line::from(Span::styled(
             turn_text,
             Style::default().fg(RatatuiColor::White),
         )));
-
-        // AI thinking indicator
-        if self.ai_thinking {
-            lines.push(Line::from(Span::styled(
-                "AI is thinking...",
-                Style::default().fg(RatatuiColor::Yellow),
-            )));
-        }
 
         // Local mode indicator
         if self.is_local_mode {
@@ -79,7 +71,7 @@ impl<'a> Widget for GameStatus<'a> {
             )));
         }
 
-        let paragraph = Paragraph::new(lines).alignment(Alignment::Center);
+        let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
         paragraph.render(area, buf);
     }
 }

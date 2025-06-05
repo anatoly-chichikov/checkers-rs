@@ -4,7 +4,6 @@ mod interface;
 mod utils;
 
 use std::env;
-use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -19,15 +18,22 @@ async fn get_welcome_content() -> (String, String, String) {
             if parts.len() >= 3 {
                 let did_you_know = parts[0]
                     .strip_prefix("Did You Know?\n")
+                    .or_else(|| parts[0].strip_prefix("**Did You Know?**\n"))
                     .unwrap_or(parts[0])
+                    .replace("**", "")
                     .to_string();
                 let tip_of_the_day = parts[1]
                     .strip_prefix("Tip of the Day\n")
+                    .or_else(|| parts[1].strip_prefix("**Tip of the Day**\n"))
                     .unwrap_or(parts[1])
+                    .replace("**", "")
                     .to_string();
                 let todays_challenge = parts[2]
                     .strip_prefix("Challenge\n")
+                    .or_else(|| parts[2].strip_prefix("**Challenge**\n"))
+                    .or_else(|| parts[2].strip_prefix("**Today's Challenge**\n"))
                     .unwrap_or(parts[2])
+                    .replace("**", "")
                     .to_string();
                 (did_you_know, tip_of_the_day, todays_challenge)
             } else {
@@ -145,11 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     .await
                                 {
                                     Ok(hint_text) => {
-                                        current_hint = Some(Hint {
-                                            from: (0, 0), // Not used in display
-                                            to: (0, 0),   // Not used in display
-                                            hint: hint_text,
-                                        });
+                                        current_hint = Some(Hint { hint: hint_text });
                                     }
                                     Err(_) => {
                                         current_hint = None;

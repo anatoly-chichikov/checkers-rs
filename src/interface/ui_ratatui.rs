@@ -1,13 +1,13 @@
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color as RatatuiColor, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame, Terminal,
+    Terminal,
 };
 
 use crate::{
@@ -91,27 +91,40 @@ impl UI {
         ai_error: Option<&str>,
     ) -> io::Result<()> {
         self.terminal.draw(|f| {
-            // Main layout
+            // First, create a centered column of fixed width
+            let main_width = 64; // Увеличили ширину для большего "воздуха"
+            let centered_area = if f.area().width >= main_width {
+                Rect {
+                    x: (f.area().width - main_width) / 2,
+                    y: f.area().y,
+                    width: main_width,
+                    height: f.area().height,
+                }
+            } else {
+                f.area() // Fallback if terminal is too narrow
+            };
+
+            // Main layout within the centered area
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1), // Top separator
-                    Constraint::Length(3), // Game status
-                    Constraint::Min(20),   // Board
-                    Constraint::Length(1), // Bottom separator
-                    Constraint::Length(1), // Controls
-                    Constraint::Length(6), // Hint area
+                    Constraint::Length(1),  // Top separator
+                    Constraint::Length(2),  // Game status (reduced from 3)
+                    Constraint::Length(18), // Board (fixed height instead of Min)
+                    Constraint::Length(1),  // Bottom separator
+                    Constraint::Length(1),  // Controls
+                    Constraint::Length(6),  // Hint area (fixed small height)
+                    Constraint::Min(0),     // Remaining space
                 ])
-                .split(f.area());
+                .split(centered_area);
 
             // Top separator
-            let separator = "═".repeat(60);
-            let sep_widget = Paragraph::new(separator)
-                .style(Style::default().fg(RatatuiColor::Magenta))
-                .alignment(Alignment::Center);
+            let separator = "═".repeat(64);
+            let sep_widget =
+                Paragraph::new(separator).style(Style::default().fg(RatatuiColor::Magenta));
             f.render_widget(sep_widget, chunks[0]);
 
-            // Game status
+            // Game status - no padding, aligned within the 60-char column
             let status = GameStatus::new(game.current_player)
                 .ai_thinking(ai_thinking)
                 .local_mode(false) // Will be determined by caller
@@ -126,10 +139,9 @@ impl UI {
             f.render_widget(board_widget, chunks[2]);
 
             // Bottom separator
-            let bottom_sep = "─".repeat(60);
-            let bottom_sep_widget = Paragraph::new(bottom_sep)
-                .style(Style::default().fg(RatatuiColor::Magenta))
-                .alignment(Alignment::Center);
+            let bottom_sep = "─".repeat(64);
+            let bottom_sep_widget =
+                Paragraph::new(bottom_sep).style(Style::default().fg(RatatuiColor::Magenta));
             f.render_widget(bottom_sep_widget, chunks[3]);
 
             // Controls
@@ -190,10 +202,7 @@ impl UI {
 
     pub fn get_input(&self) -> io::Result<Input> {
         loop {
-            if let Event::Key(KeyEvent {
-                code, modifiers, ..
-            }) = event::read()?
-            {
+            if let Event::Key(KeyEvent { code, .. }) = event::read()? {
                 let input = match code {
                     KeyCode::Up => Input::Up,
                     KeyCode::Down => Input::Down,
@@ -202,9 +211,7 @@ impl UI {
                     KeyCode::Char(' ') | KeyCode::Enter => Input::Select,
                     KeyCode::Esc => Input::Quit,
                     KeyCode::Char('q') | KeyCode::Char('Q') => Input::Quit,
-                    KeyCode::Char('й') | KeyCode::Char('Й') if modifiers.is_empty() => {
-                        Input::Quit
-                    }
+                    KeyCode::Char('й') | KeyCode::Char('Й') => Input::Quit,
                     _ => continue,
                 };
                 return Ok(input);
@@ -234,10 +241,6 @@ impl UI {
 
     pub fn get_cursor_position(&self) -> (usize, usize) {
         self.cursor_pos
-    }
-
-    pub fn reset_cursor(&mut self) {
-        self.cursor_pos = (5, 0);
     }
 }
 

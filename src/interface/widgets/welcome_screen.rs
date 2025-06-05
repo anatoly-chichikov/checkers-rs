@@ -21,10 +21,34 @@ impl WelcomeScreen {
         }
     }
 
+    fn wrap_text(&self, text: &str, max_width: usize) -> Vec<String> {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+
+        for word in words {
+            if current_line.is_empty() {
+                current_line = word.to_string();
+            } else if current_line.len() + 1 + word.len() <= max_width {
+                current_line.push(' ');
+                current_line.push_str(word);
+            } else {
+                lines.push(current_line);
+                current_line = word.to_string();
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        lines
+    }
+
     fn render_header(&self, area: Rect, buf: &mut Buffer) {
         let header_lines = vec![
             "╔═╗╦ ╦╔═╗╔═╗╦╔═╔═╗╦═╗╔═╗",
-            "║ ╠═╣║╣ ║ ╠╩╗║╣ ╠╦╝╚═╗",
+            "║  ╠═╣║╣ ║  ╠╩╗║╣ ╠╦╝╚═╗",
             "╚═╝╩ ╩╚═╝╚═╝╩ ╩╚═╝╩╚═╚═╝",
         ];
 
@@ -72,16 +96,21 @@ impl WelcomeScreen {
 
         let underline = "════════════════";
 
-        let content = vec![
+        // Split content into lines for proper wrapping
+        let wrapped_text = self.wrap_text(&self.tip_of_the_day, 60);
+        let mut content = vec![
             Line::from(title),
             Line::from(Span::styled(underline, Style::default().fg(Color::Blue))),
-            Line::from(""),
-            Line::from(self.tip_of_the_day.as_str()),
         ];
 
-        let paragraph = Paragraph::new(content)
-            .style(Style::default().fg(Color::White))
-            .alignment(Alignment::Center);
+        for line in wrapped_text {
+            content.push(Line::from(Span::styled(
+                line,
+                Style::default().fg(Color::White),
+            )));
+        }
+
+        let paragraph = Paragraph::new(content).alignment(Alignment::Center);
 
         paragraph.render(area, buf);
     }
@@ -94,16 +123,21 @@ impl WelcomeScreen {
 
         let underline = "═══════════════════";
 
-        let content = vec![
+        // Split content into lines for proper wrapping
+        let wrapped_text = self.wrap_text(&self.todays_challenge, 60);
+        let mut content = vec![
             Line::from(title),
             Line::from(Span::styled(underline, Style::default().fg(Color::Blue))),
-            Line::from(""),
-            Line::from(self.todays_challenge.as_str()),
         ];
 
-        let paragraph = Paragraph::new(content)
-            .style(Style::default().fg(Color::White))
-            .alignment(Alignment::Center);
+        for line in wrapped_text {
+            content.push(Line::from(Span::styled(
+                line,
+                Style::default().fg(Color::White),
+            )));
+        }
+
+        let paragraph = Paragraph::new(content).alignment(Alignment::Center);
 
         paragraph.render(area, buf);
     }
@@ -125,12 +159,12 @@ impl Widget for WelcomeScreen {
             .constraints([
                 Constraint::Length(3), // Header
                 Constraint::Length(1), // Separator
-                Constraint::Length(2), // Space
+                Constraint::Length(1), // Space after separator
                 Constraint::Length(5), // Did You Know
                 Constraint::Length(2), // Space
-                Constraint::Length(5), // Tip of the Day
+                Constraint::Length(6), // Tip of the Day (with underline)
                 Constraint::Length(2), // Space
-                Constraint::Length(5), // Today's Challenge
+                Constraint::Length(6), // Today's Challenge (with underline)
                 Constraint::Min(1),    // Flexible space
                 Constraint::Length(1), // Instructions
                 Constraint::Length(2), // Bottom padding
@@ -142,7 +176,7 @@ impl Widget for WelcomeScreen {
         self.render_separator(chunks[1], buf);
 
         // Center the content blocks horizontally
-        let content_width = 65;
+        let content_width = 63; // Changed from 65 to 63 to match design spec
         let did_you_know_area = Rect {
             x: area.x + (area.width.saturating_sub(content_width)) / 2,
             y: chunks[3].y,

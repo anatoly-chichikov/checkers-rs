@@ -1,6 +1,7 @@
 use checkers_rs::core::board::Board;
 use checkers_rs::core::game::CheckersGame;
 use checkers_rs::core::piece::{Color, Piece};
+use checkers_rs::test_helpers::MultiCaptureCheck;
 
 #[test]
 fn test_deselection_allowed_when_clicking_outside_possible_moves() {

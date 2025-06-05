@@ -1,16 +1,11 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Layout, Rect},
+    layout::Rect,
     style::{Color, Modifier, Style},
-    symbols,
-    text::{Line, Span},
-    widgets::{Block, Borders, Widget},
+    widgets::Widget,
 };
 
-use crate::core::{
-    board::Board,
-    piece::{Color as PieceColor, Piece},
-};
+use crate::core::{board::Board, piece::Color as PieceColor};
 
 pub struct CheckerBoard<'a> {
     board: &'a Board,
@@ -46,7 +41,6 @@ impl<'a> CheckerBoard<'a> {
 
     fn render_cell(&self, buf: &mut Buffer, x: u16, y: u16, row: usize, col: usize) {
         let piece = self.board.get_piece(row, col);
-        let is_cursor = (row, col) == self.cursor_pos;
         let is_possible_move = self.possible_moves.contains(&(row, col));
 
         // Determine cell background
@@ -116,21 +110,24 @@ impl<'a> Widget for CheckerBoard<'a> {
         let board_height = cell_height * 8 + 1; // +1 for final border
 
         // Add space for coordinates
-        let total_width = board_width + 3; // 3 chars for row numbers
-        let total_height = board_height + 2; // 2 rows for column letters
+        let total_width = board_width + 4; // 4 chars for row numbers ("  8 ")
+        let total_height = board_height + 1; // 1 row for column letters (reduced from 2)
 
         if area.width < total_width || area.height < total_height {
             return; // Not enough space
         }
 
-        // Center the board
+        // Center the board horizontally, minimal vertical centering
         let x_offset = (area.width - total_width) / 2 + area.x;
-        let y_offset = (area.height - total_height) / 2 + area.y;
+        let y_offset = area
+            .y
+            .saturating_add((area.height.saturating_sub(total_height)) / 4); // Use 1/4 instead of 1/2 for vertical centering
 
-        // Draw column labels
-        let col_labels = "      A     B     C     D     E     F     G     H";
+        // Draw column labels (aligned with board cells)
+        // Column labels should start where the board cells start (after row numbers)
+        let col_labels = "A     B     C     D     E     F     G     H";
         buf.set_string(
-            x_offset,
+            x_offset + 4,  // Same offset as board cells
             y_offset,
             col_labels,
             Style::default().fg(Color::White),
@@ -138,9 +135,9 @@ impl<'a> Widget for CheckerBoard<'a> {
 
         // Draw the board
         for row in 0..8 {
-            let y_pos = y_offset + 2 + row as u16 * cell_height;
+            let y_pos = y_offset + 1 + row as u16 * cell_height; // Reduced from +2 to +1
 
-            // Draw row number
+            // Draw row number (1 at bottom, 8 at top)
             buf.set_string(
                 x_offset,
                 y_pos + cell_height / 2,
@@ -153,7 +150,7 @@ impl<'a> Widget for CheckerBoard<'a> {
                 let x_pos = x_offset + 4 + col as u16 * cell_width;
 
                 // Draw cell borders
-                let (tl, t, tr, l, r, bl, b, br, h) = self.get_border_chars(row, col);
+                let (tl, t, tr, l, r, bl, b, br, _) = self.get_border_chars(row, col);
                 let border_style = if (row, col) == self.cursor_pos {
                     Style::default()
                         .fg(Color::White)
