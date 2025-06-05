@@ -3,102 +3,90 @@ mod core;
 mod interface;
 mod utils;
 
-use crossterm::{
-    cursor::{self, Show},
-    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
-};
-use std::io::{self, stdout};
+use std::env;
+use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::ai::{explain_rules, get_ai_move, hint::HintProvider, AIError};
-use crate::core::game;
-use crate::core::piece::Color as PieceColor;
-use crate::interface::input;
-use crate::interface::input::{CursorDirection, GameInput};
-use crate::interface::ui::UI;
-use crate::interface::welcome_screen::display_welcome_screen;
-use std::env;
+use crate::ai::{explain_rules, get_ai_move, hint::HintProvider, AIError, Hint};
+use crate::core::{game::CheckersGame, piece::Color};
+use crate::interface::ui_ratatui::{Input, UI};
 
-fn cleanup_terminal() -> io::Result<()> {
-    let mut stdout = stdout();
-    stdout.execute(Show)?;
-    stdout.execute(LeaveAlternateScreen)?;
-    terminal::disable_raw_mode()?;
-    // Clear the main screen after leaving alternate screen
-    stdout.execute(Clear(ClearType::All))?;
-    stdout.execute(cursor::MoveTo(0, 0))?;
-    Ok(())
+async fn get_welcome_content() -> (String, String, String) {
+    match explain_rules().await {
+        Ok(rules) => {
+            let parts: Vec<&str> = rules.split("\n\n").collect();
+            if parts.len() >= 3 {
+                let did_you_know = parts[0]
+                    .strip_prefix("Did You Know?\n")
+                    .unwrap_or(parts[0])
+                    .to_string();
+                let tip_of_the_day = parts[1]
+                    .strip_prefix("Tip of the Day\n")
+                    .unwrap_or(parts[1])
+                    .to_string();
+                let todays_challenge = parts[2]
+                    .strip_prefix("Challenge\n")
+                    .unwrap_or(parts[2])
+                    .to_string();
+                (did_you_know, tip_of_the_day, todays_challenge)
+            } else {
+                default_welcome_content()
+            }
+        }
+        Err(AIError::NoApiKey) | Err(AIError::NoModel) => {
+            eprintln!("Note: Add GEMINI_API_KEY and GEMINI_MODEL to your .env file to enable AI-powered content.");
+            default_welcome_content()
+        }
+        Err(e) => {
+            eprintln!("Failed to get checkers content from AI: {}", e);
+            default_welcome_content()
+        }
+    }
 }
 
-fn check_and_set_game_over(game: &mut game::CheckersGame) {
-    if game.check_winner().is_some() || game.is_stalemate() {
-        game.is_game_over = true;
-    }
+fn default_welcome_content() -> (String, String, String) {
+    (
+        "The game of checkers has been played for thousands of years!".to_string(),
+        "Always try to control the center of the board.".to_string(),
+        "Try to win a game without losing any pieces!".to_string(),
+    )
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize terminal for loading animation
-    terminal::enable_raw_mode()?;
-    {
-        let mut stdout = stdout();
-        stdout.execute(terminal::EnterAlternateScreen)?;
-        stdout.execute(Clear(ClearType::All))?;
-    }
+    // Initialize UI
+    let mut ui = UI::new()?;
+    ui.init()?;
 
-    let welcome_message = match explain_rules().await {
-        Ok(rules) => rules,
-        Err(AIError::NoApiKey) | Err(AIError::NoModel) => {
-            eprintln!("Note: Add GEMINI_API_KEY and GEMINI_MODEL to your .env file to enable AI-powered content.");
-            String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
+    // Get welcome content
+    let (did_you_know, tip_of_the_day, todays_challenge) = get_welcome_content().await;
+
+    // Display welcome screen
+    ui.draw_welcome_screen(&did_you_know, &tip_of_the_day, &todays_challenge)?;
+
+    // Wait for user input
+    loop {
+        match ui.get_input()? {
+            Input::Select => break, // ENTER pressed
+            Input::Quit => {
+                ui.restore()?;
+                return Ok(());
+            }
+            _ => {} // Ignore other inputs
         }
-        Err(e) => {
-            eprintln!("Failed to get checkers content from AI: {}", e);
-            String::from("Did You Know?\n...The game of checkers has been played for thousands of years!\n\nTip of the Day\n...Always try to control the center of the board.\n\nChallenge\n...Try to win a game without losing any pieces!")
-        }
-    };
-
-    // Reset terminal for welcome screen
-    terminal::disable_raw_mode()?;
-    {
-        let mut stdout = stdout();
-        stdout.execute(terminal::LeaveAlternateScreen)?;
     }
 
-    let should_continue = display_welcome_screen(&welcome_message)?;
-
-    // Show cursor after welcome screen
-    stdout().execute(Show)?;
-
-    if !should_continue {
-        // Clear the screen before exiting
-        let mut stdout = stdout();
-        stdout.execute(Clear(ClearType::All))?;
-        stdout.execute(cursor::MoveTo(0, 0))?;
-        cleanup_terminal()?;
-        return Ok(());
-    }
-
+    // Setup Ctrl-C handler
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
+    })?;
 
-    let mut stdout = stdout();
-    // Clear the welcome screen before entering alternate screen
-    stdout.execute(Clear(ClearType::All))?;
-    stdout.execute(cursor::MoveTo(0, 0))?;
-    terminal::enable_raw_mode()?;
-    stdout.execute(EnterAlternateScreen)?;
-
-    let mut game = game::CheckersGame::new();
-    let mut ui = UI::new();
-    let mut needs_render = true;
-    let mut current_hint: Option<String> = None;
+    // Initialize game
+    let mut game = CheckersGame::new();
+    let mut current_hint: Option<Hint> = None;
 
     // Check if AI mode is available
     let api_key = env::var("GEMINI_API_KEY").ok();
@@ -108,156 +96,145 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_ref()
         .and_then(|key| HintProvider::new(key.clone()).ok());
 
-    while running.load(Ordering::SeqCst) {
-        if needs_render {
-            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
-            needs_render = false;
-        }
+    // Main game loop
+    while running.load(Ordering::SeqCst) && !game.is_game_over {
+        // Draw the game
+        ui.draw_game(
+            &game,
+            game.selected_piece,
+            game.possible_moves.as_ref().unwrap_or(&Vec::new()),
+            current_hint.as_ref(),
+            game.ai_thinking,
+            game.ai_error.as_deref(),
+        )?;
 
-        if let Some(input) = input::read_input()? {
-            match input {
-                GameInput::MoveCursor(direction) => {
-                    let (row, col) = ui.get_cursor();
-                    let (new_row, new_col) = match direction {
-                        CursorDirection::Up => (row.saturating_sub(1), col),
-                        CursorDirection::Down => ((row + 1).min(game.board.size - 1), col),
-                        CursorDirection::Left => (row, col.saturating_sub(1)),
-                        CursorDirection::Right => (row, (col + 1).min(game.board.size - 1)),
-                    };
-                    ui.set_cursor(new_row, new_col);
-                    needs_render = true;
-                }
-                GameInput::Select => {
-                    let (row, col) = ui.get_cursor();
-                    if game.selected_piece == Some((row, col)) {
-                        game.selected_piece = None;
-                        needs_render = true;
-                    } else {
-                        match game.selected_piece {
-                            None => {
-                                let select_result = game.select_piece(row, col);
-                                if let Err(_e) = select_result {
-                                    // Error will be visible in UI
-                                }
-                                needs_render = true;
-                            }
-                            Some(_) => {
-                                // Check if the selected cell is in possible moves
-                                if let Some(possible_moves) = &game.possible_moves {
-                                    if !possible_moves.contains(&(row, col)) {
-                                        // Only clear selection if NOT in a multi-capture sequence
-                                        if !game.is_in_multi_capture() {
-                                            game.selected_piece = None;
-                                            game.possible_moves = None;
-                                        }
-                                        needs_render = true;
-                                    } else {
-                                        // Attempt the move
-                                        let move_result = game.make_move(row, col);
-                                        if let Err(_e) = move_result {
-                                            // Error will be visible in UI
-                                        } else {
-                                            game.ai_error = None; // Clear AI error on successful player move
-                                            check_and_set_game_over(&mut game);
-                                        }
-                                        needs_render = true;
-                                    }
-                                } else {
-                                    // No possible moves, clear selection
-                                    game.selected_piece = None;
-                                    needs_render = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                GameInput::Quit => break,
-            }
-        }
-
-        // Reset flag before checking for AI turn
-        game.ai_thinking = false;
-
-        // AI mode: Black is controlled by AI
-        if ai_enabled && game.current_player == PieceColor::Black && !game.is_game_over {
+        // Handle AI turn
+        if ai_enabled && game.current_player == Color::Black {
             game.ai_thinking = true;
-            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
+            ui.draw_game(
+                &game,
+                game.selected_piece,
+                game.possible_moves.as_ref().unwrap_or(&Vec::new()),
+                current_hint.as_ref(),
+                game.ai_thinking,
+                game.ai_error.as_deref(),
+            )?;
 
             match get_ai_move(&game).await {
                 Ok(((from_row, from_col), (to_row, to_col))) => {
                     game.ai_thinking = false;
-                    let select_result = game.select_piece(from_row, from_col);
-                    if let Err(e) = select_result {
-                        eprintln!(
-                            "AI failed to select piece at ({}, {}): {:?}",
-                            from_row, from_col, e
-                        );
+                    if let Err(e) = game.select_piece(from_row, from_col) {
+                        game.ai_error = Some(format!("AI failed to select piece: {}", e));
                         game.switch_player();
+                    } else if let Err(e) = game.make_move(to_row, to_col) {
+                        game.ai_error = Some(format!("AI failed to move: {}", e));
+                        if game.current_player == Color::Black {
+                            game.switch_player();
+                        }
                     } else {
-                        let move_result = game.make_move(to_row, to_col);
-                        if let Err(e) = move_result {
-                            eprintln!("AI failed to move to ({}, {}): {:?}", to_row, to_col, e);
-                            if game.current_player == PieceColor::Black {
-                                game.switch_player();
-                            }
-                        } else {
-                            game.ai_error = None; // Clear AI error on successful move
-                            check_and_set_game_over(&mut game);
-
-                            // Automatically update hint after AI move
-                            if let Some(ref provider) = hint_provider {
-                                if game.current_player == PieceColor::White && !game.is_game_over {
-                                    match provider
-                                        .get_hint(
-                                            &game.board,
-                                            PieceColor::White,
-                                            &game.move_history,
-                                        )
-                                        .await
-                                    {
-                                        Ok(hint) => {
-                                            current_hint = Some(hint);
-                                        }
-                                        Err(e) => {
-                                            eprintln!("Failed to get hint after AI move: {}", e);
-                                            current_hint = None;
-                                        }
+                        game.ai_error = None;
+                        // Check for game over
+                        if game.check_winner().is_some() || game.is_stalemate() {
+                            game.is_game_over = true;
+                        }
+                        // Update hint after AI move
+                        if let Some(ref provider) = hint_provider {
+                            if game.current_player == Color::White && !game.is_game_over {
+                                match provider
+                                    .get_hint(&game.board, Color::White, &game.move_history)
+                                    .await
+                                {
+                                    Ok(hint_text) => {
+                                        current_hint = Some(Hint {
+                                            from: (0, 0), // Not used in display
+                                            to: (0, 0),   // Not used in display
+                                            hint: hint_text,
+                                        });
                                     }
-                                } else {
-                                    current_hint = None;
+                                    Err(_) => {
+                                        current_hint = None;
+                                    }
                                 }
-                            } else {
-                                current_hint = None;
                             }
                         }
                     }
                 }
-                Err(ai_error) => {
+                Err(e) => {
                     game.ai_thinking = false;
-                    game.ai_error = Some(format!("AI Error: {}", ai_error));
+                    game.ai_error = Some(format!("AI Error: {}", e));
                     game.switch_player();
                 }
             }
-            game.ai_thinking = false; // Ensure flag is reset after AI move
-
-            // Immediately render the board to show AI move
-            ui.render_game_with_hint_and_mode(&game, current_hint.as_deref(), ai_enabled)?;
-            needs_render = false; // Reset since we just rendered
+            game.ai_thinking = false;
+            continue; // Skip input handling for AI turn
         }
 
-        if game.is_game_over {
-            ui.render_game_with_hint_and_mode(&game, None, ai_enabled)?;
-            // Wait for any key press before exiting
-            loop {
-                if input::read_input()?.is_some() {
-                    break;
+        // Handle player input
+        let input = ui.get_input()?;
+        match input {
+            Input::Up | Input::Down | Input::Left | Input::Right => {
+                ui.move_cursor(input);
+            }
+            Input::Select => {
+                let cursor_pos = ui.get_cursor_position();
+
+                // If we have a selected piece
+                if let Some(selected) = game.selected_piece {
+                    // Check if clicking on the same piece (deselect)
+                    if selected == cursor_pos {
+                        game.selected_piece = None;
+                        game.possible_moves = None;
+                    }
+                    // Check if clicking on a possible move
+                    else if let Some(ref moves) = game.possible_moves {
+                        if moves.contains(&cursor_pos) {
+                            // Make the move
+                            if let Err(e) = game.make_move(cursor_pos.0, cursor_pos.1) {
+                                // Handle error (could show in UI)
+                                eprintln!("Move failed: {}", e);
+                            } else {
+                                // Check for game over
+                                if game.check_winner().is_some() || game.is_stalemate() {
+                                    game.is_game_over = true;
+                                }
+                                // Clear hint after player move
+                                current_hint = None;
+                            }
+                        } else {
+                            // Try to select a new piece
+                            game.selected_piece = None;
+                            if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
+                                // Selection successful
+                            }
+                        }
+                    }
+                }
+                // No piece selected, try to select one
+                else {
+                    if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
+                        // Selection successful
+                    }
                 }
             }
-            break;
+            Input::Quit => break,
         }
     }
 
-    // Cleanup and exit
-    cleanup_terminal()?;
+    // Show game over screen
+    if game.is_game_over {
+        let winner = game.check_winner();
+        ui.draw_game_over(winner)?;
+
+        // Wait for any key
+        loop {
+            match ui.get_input()? {
+                Input::Quit | Input::Select => break,
+                _ => {}
+            }
+        }
+    }
+
+    // Restore terminal
+    ui.restore()?;
     Ok(())
 }
