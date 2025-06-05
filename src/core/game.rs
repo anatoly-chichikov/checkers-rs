@@ -157,22 +157,4 @@ impl CheckersGame {
     pub fn is_stalemate(&self) -> bool {
         game_logic::is_stalemate(&self.board, self.current_player)
     }
-
-    pub fn is_in_multi_capture(&self) -> bool {
-        // Check if we have a selected piece and all possible moves are captures
-        if let Some((row, col)) = self.selected_piece {
-            if let Some(possible_moves) = &self.possible_moves {
-                // If there are possible moves and they are all captures (distance of 2)
-                !possible_moves.is_empty()
-                    && possible_moves.iter().all(|(to_row, to_col)| {
-                        ((*to_row as i32 - row as i32).abs() == 2)
-                            && ((*to_col as i32 - col as i32).abs() == 2)
-                    })
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
 }
