@@ -83,26 +83,38 @@ The game has several main states, each with its own set of controls.
 4. **Game Over State**:
    - Any key → Exit Application
 
+## How to Move a Piece - Step by Step
+
+**The complete flow for moving a piece:**
+
+1. **Navigate to your piece** - Use arrow keys (`↑` `↓` `←` `→`) to move the cursor to the piece you want to move
+2. **Select the piece** - Press `SPACE` or `ENTER` to select it (the piece will be highlighted)
+3. **Navigate to destination** - Use arrow keys (`↑` `↓` `←` `→`) to move the cursor to where you want to move the piece
+4. **Confirm the move** - Press `SPACE` or `ENTER` again to complete the move
+
+**Important:** After selecting a piece with `SPACE`, you immediately use arrow keys to navigate to the destination square, then press `SPACE` again to confirm the move.
+
 ## Piece Selection States
 
 Within the Playing State, there are sub-states for piece selection:
 
 ### 1. No Piece Selected
-- Cursor can move freely
-- `SPACE`/`ENTER` attempts to select piece at cursor
+- Cursor can move freely with arrow keys
+- `SPACE`/`ENTER` attempts to select piece at cursor position
 
 ### 2. Piece Selected
-- Selected piece is highlighted
-- Possible moves are shown
-- `SPACE`/`ENTER` on same piece → Deselect
-- `SPACE`/`ENTER` on valid move → Make move
-- `SPACE`/`ENTER` on another piece → Select new piece (if same color)
+- Selected piece is highlighted with special border
+- Possible valid moves are shown on the board
+- Use arrow keys to navigate to any valid move position
+- `SPACE`/`ENTER` on same piece → Deselect the piece
+- `SPACE`/`ENTER` on valid move → Execute the move
+- `SPACE`/`ENTER` on another piece of same color → Select new piece
 
 ### 3. Multi-capture Mode
-- After capturing, if more captures are available
-- Piece remains selected
+- After capturing, if more captures are available with the same piece
+- Piece remains selected automatically
 - Only capture moves are shown
-- Must complete all captures
+- Must complete all available captures
 
 ## Game Rules Enforced
 
