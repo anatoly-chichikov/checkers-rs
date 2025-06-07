@@ -112,11 +112,12 @@ impl UI {
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Length(1),  // Top separator
-                    Constraint::Length(1),  // Game status (reduced from 2)
+                    Constraint::Length(2),  // Game status (reduced from 3)
                     Constraint::Length(18), // Board (fixed height instead of Min)
                     Constraint::Length(1),  // Bottom separator
                     Constraint::Length(1),  // Controls
-                    Constraint::Min(0),     // Remaining space for hint
+                    Constraint::Length(6),  // Hint area (fixed small height)
+                    Constraint::Min(0),     // Remaining space
                 ])
                 .split(centered_area);
 
@@ -152,12 +153,10 @@ impl UI {
                 .alignment(Alignment::Center);
             f.render_widget(controls_widget, chunks[4]);
 
-            // Hint - only render if there's space
+            // Hint
             if let Some(hint) = hint {
-                if chunks[5].height > 0 {
-                    let hint_display = HintDisplay::new(Some(&hint.hint));
-                    f.render_widget(hint_display, chunks[5]);
-                }
+                let hint_display = HintDisplay::new(Some(&hint.hint));
+                f.render_widget(hint_display, chunks[5]);
             }
         })?;
         Ok(())
