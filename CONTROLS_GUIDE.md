@@ -26,9 +26,9 @@ The game has several main states, each with its own set of controls.
 **UI Elements**:
 - Status bar showing current turn
 - 8x8 checkerboard with pieces
-- Cursor position (highlighted square)
-- Selected piece highlighting
-- Possible moves highlighting
+- Cursor position (highlighted square with bold border)
+- Selected piece highlighting (bold double-line border)
+- Possible moves highlighting (green background color)
 - Controls reminder at bottom
 - Hint display (if available)
 - AI thinking indicator
@@ -103,8 +103,8 @@ Within the Playing State, there are sub-states for piece selection:
 - `SPACE`/`ENTER` attempts to select piece at cursor position
 
 ### 2. Piece Selected
-- Selected piece is highlighted with special border
-- Possible valid moves are shown on the board
+- Selected piece is highlighted with special border (bold double lines)
+- **Possible valid moves are shown with green background highlighting**
 - Use arrow keys to navigate to any valid move position
 - `SPACE`/`ENTER` on same piece → Deselect the piece
 - `SPACE`/`ENTER` on valid move → Execute the move
@@ -133,33 +133,23 @@ The game handles various error conditions gracefully:
 
 ## Running in tmux
 
-To properly display the game with colors in tmux, you need to configure tmux for true color support:
-
-### 1. Configure tmux for true color
-
-Add these lines to your `~/.tmux.conf`:
+To properly display the game with colors in tmux, use the following command to create a session with true color support:
 
 ```bash
-# For tmux 3.2+
-set -g default-terminal "tmux-256color"
-set -ag terminal-features ",xterm-256color:RGB"
-
-# For older tmux versions
-set -g default-terminal "screen-256color"
-set -ga terminal-overrides ",*256col*:Tc"
+# Create tmux session with color support enabled
+TERM=xterm-256color tmux new-session -s checkers \; \
+  set -g default-terminal "tmux-256color" \; \
+  set -ag terminal-features ",xterm-256color:RGB"
 ```
 
-### 2. Start tmux with proper environment
+This single command:
+- Sets the TERM environment variable
+- Creates a new tmux session named "checkers"
+- Configures the session for true color support
 
-```bash
-# Set terminal type before starting tmux
-export TERM=xterm-256color
-tmux new-session -s checkers
-```
+### Verify true color support (optional)
 
-### 3. Verify true color support
-
-Inside tmux, test if true color is working:
+Inside tmux, you can test if true color is working:
 
 ```bash
 printf "\x1b[38;2;255;100;0mTRUECOLOR\x1b[0m\n"
@@ -167,11 +157,48 @@ printf "\x1b[38;2;255;100;0mTRUECOLOR\x1b[0m\n"
 
 If you see orange text, true color is working correctly.
 
-### 4. Terminal requirements
+### Terminal requirements
 
 - Minimum terminal size: 80x24 characters
 - The board requires at least 53 characters width and 18 lines height
 - If the terminal is too small, the board will not render
+
+### Capturing colors in tmux (for automation/agents)
+
+When automating the game or using agents, capture the pane with ANSI color codes to see highlighted moves:
+
+```bash
+# Capture with colors preserved
+tmux capture-pane -t <pane-id> -p -e
+
+# Example to see the board with highlighted moves
+tmux capture-pane -t %5 -p -e | head -40
+```
+
+This is essential because:
+- Selected pieces are highlighted with bold borders
+- **Possible moves are highlighted with green background color** (RGB: 120,140,100)
+- Without color capture, these visual cues are invisible
+
+## Efficient Keyboard Input (for automation/agents)
+
+When automating gameplay through tmux, you can send multiple key combinations at once for efficiency:
+
+```bash
+# Send multiple arrow keys in one command
+tmux send-keys -t <pane-id> Up Up Right Right
+
+# Navigate diagonally with combined commands
+tmux send-keys -t <pane-id> Down Down Down Left Left Space
+
+# Example: Move from A3 to C5 in one command
+tmux send-keys -t <pane-id> Right Right Up Up Space
+```
+
+This is much more efficient than sending individual keystrokes:
+- Combine multiple directional movements into one command
+- Add the selection/confirmation key (Space) at the end
+- Reduces latency and speeds up automation
 
 ## Notes
 
