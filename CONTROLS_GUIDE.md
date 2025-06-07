@@ -133,19 +133,17 @@ The game handles various error conditions gracefully:
 
 ## Running in tmux
 
-To properly display the game with colors in tmux, use the following command to create a session with true color support:
+To properly display the game with colors in tmux:
 
 ```bash
-# Create tmux session with color support enabled
-TERM=xterm-256color tmux new-session -s checkers \; \
-  set -g default-terminal "tmux-256color" \; \
-  set -ag terminal-features ",xterm-256color:RGB"
+# Create a tmux session
+tmux new-session -d -s checkers
+
+# Start the game with color support
+tmux send-keys -t checkers 'TERM=xterm-256color cargo run --release' Enter
 ```
 
-This single command:
-- Sets the TERM environment variable
-- Creates a new tmux session named "checkers"
-- Configures the session for true color support
+**Important**: Use the `-d` flag to create the session in detached mode, otherwise the command may hang when run programmatically.
 
 ### Verify true color support (optional)
 
@@ -165,20 +163,62 @@ If you see orange text, true color is working correctly.
 
 ### Capturing colors in tmux (for automation/agents)
 
-When automating the game or using agents, capture the pane with ANSI color codes to see highlighted moves:
+When automating the game or using agents, you MUST capture the pane with ANSI color codes to see highlighted moves:
 
 ```bash
-# Capture with colors preserved
+# Capture with colors preserved - CRITICAL for seeing valid moves
 tmux capture-pane -t <pane-id> -p -e
 
 # Example to see the board with highlighted moves
-tmux capture-pane -t %5 -p -e | head -40
+tmux capture-pane -t %6 -p -e | head -40
 ```
 
+**CRITICAL**: When using tmux automation tools (like MCP tmux tools), use the native capture functionality with color support, NOT command execution to run the capture command. The difference:
+- ✅ CORRECT: Use the capture tool directly with color flag enabled
+- ❌ WRONG: Execute `tmux capture-pane` as a shell command through command execution
+
 This is essential because:
-- Selected pieces are highlighted with bold borders
+- Selected pieces are highlighted with bold borders (╔═════╗)
 - **Possible moves are highlighted with green background color** (RGB: 120,140,100)
-- Without color capture, these visual cues are invisible
+- Without color capture, these visual cues are invisible and you cannot see where you can move
+
+## Automation Best Practices
+
+### Step-by-Step Move Process for Agents
+
+When automating moves, follow this exact sequence:
+
+1. **Capture with colors** to see the current board state
+2. **Navigate to your piece** using arrow keys
+3. **Select the piece** with Space
+4. **Capture with colors again** to see highlighted valid moves (green background)
+5. **Navigate to a highlighted square** (only green squares are valid)
+6. **Confirm the move** with Space
+
+### Example Automation Workflow
+
+```bash
+# 1. Start the game in tmux pane %6
+tmux send-keys -t %6 'cargo run --release' Enter
+
+# 2. Wait for welcome screen, then start game
+tmux send-keys -t %6 Enter
+
+# 3. Capture board WITH COLORS to see pieces and valid moves
+# Use your tool's native capture with color support, not shell commands
+
+# 4. Make a move (example: piece at A3 to B4)
+tmux send-keys -t %6 Space              # Select piece at A3
+# NOW CAPTURE WITH COLORS to see green highlighted valid moves
+tmux send-keys -t %6 Up Right Space     # Move to B4 and confirm
+```
+
+### Common Automation Mistakes
+
+1. **Not capturing with colors** - You won't see valid moves
+2. **Using shell commands for capture** instead of native tool functions
+3. **Not checking for highlighted moves** after selecting a piece
+4. **Trying to move to non-highlighted squares** - Move will be rejected
 
 ## Efficient Keyboard Input (for automation/agents)
 
