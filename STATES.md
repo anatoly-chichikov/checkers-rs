@@ -234,39 +234,6 @@ To identify current state programmatically:
 
 ---
 
-## 5. Game Over State
-
-**Description**: Game has ended with a winner or stalemate
-**Triggers**: All pieces captured or no valid moves remaining
-**Key Visual Elements**:
-- Centered popup box
-- "Game Over" header
-- Winner announcement or stalemate message
-- "Press any key to exit..." prompt
-
-**Example Raw Output** (conceptual - actual may vary):
-```ansi
-                  [38;2;80;80;80m════════════════════════════════════════════════════════════════[39m
-                  [38;2;220;220;220mCurrent Turn: Black[39m
-
-                              [38;2;150;150;150mA[39m     [38;2;150;150;150mB[39m     [38;2;150;150;150mC[39m     [38;2;150;150;150mD[39m     [38;2;150;150;150mE[39m     [38;2;150;150;150mF[39m     [38;2;150;150;150mG[39m     [38;2;150;150;150mH[39m
-                           [38;2;100;100;100m┌─────┌─────┌─────┌─────┌─────┌─────┌─────┌─────┐[39m
-                       [38;2;150;150;150m 8 [39m [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[39m
-                           [38;2;100;100;100m├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤[39m
-                       [38;2;150;150;150m 7 [39m [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m
-                           [38;2;100;100;100m├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤[39m
-                       [38;2;150;150;150m 6 [39m [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[38;2;60;60;60m ░░░ [38;2;100;100;100m│[39m     [38;2;100;100;100m│[39m
-                  ┌────────────────────────────────┐
-                  │          Game Over             │ 
-                  │                                │
-                  │        White wins\!             │
-                  │                                │
-                  │    Press any key to exit...    │
-                  └────────────────────────────────┘
-```
-
----
-
 ## Color Reference
 
 Key ANSI color codes used:
@@ -286,7 +253,6 @@ Key ANSI color codes used:
 - The exact content of "Did You Know?" and hints varies as they are AI-generated
 - Terminal size affects layout - minimum 80x24 required
 - In smaller terminals, the board may not render
-- Game Over popup appears centered over the board
 - AI thinking state shows "AI thinking..." in status bar
 - Local mode shows "[LOCAL MODE - Playing against another human]"
 
