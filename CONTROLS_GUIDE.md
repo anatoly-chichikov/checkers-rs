@@ -131,9 +131,52 @@ The game handles various error conditions gracefully:
 - Missing API keys (game runs in local two-player mode)
 - Ctrl+C handling (graceful shutdown)
 
+## Running in tmux
+
+To properly display the game with colors in tmux, you need to configure tmux for true color support:
+
+### 1. Configure tmux for true color
+
+Add these lines to your `~/.tmux.conf`:
+
+```bash
+# For tmux 3.2+
+set -g default-terminal "tmux-256color"
+set -ag terminal-features ",xterm-256color:RGB"
+
+# For older tmux versions
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+```
+
+### 2. Start tmux with proper environment
+
+```bash
+# Set terminal type before starting tmux
+export TERM=xterm-256color
+tmux new-session -s checkers
+```
+
+### 3. Verify true color support
+
+Inside tmux, test if true color is working:
+
+```bash
+printf "\x1b[38;2;255;100;0mTRUECOLOR\x1b[0m\n"
+```
+
+If you see orange text, true color is working correctly.
+
+### 4. Terminal requirements
+
+- Minimum terminal size: 80x24 characters
+- The board requires at least 53 characters width and 18 lines height
+- If the terminal is too small, the board will not render
+
 ## Notes
 
 - The game maintains a clean, focused interface with no menus or configuration screens
 - All game options are determined by environment variables at startup
 - Board cells are enlarged for better visibility in terminal
 - Red pieces start at top (rows 0-2), Black at bottom (rows 5-7)
+- The game uses RGB colors which require true color terminal support
