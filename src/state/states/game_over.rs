@@ -28,8 +28,8 @@ impl State for GameOverState {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         let message = match self.winner {
-            Some(Color::White) => "Black wins!".to_string(),
-            Some(Color::Black) => "White wins!".to_string(),
+            Some(Color::White) => "White wins!".to_string(),
+            Some(Color::Black) => "Black wins!".to_string(),
             None => "Stalemate! No possible moves.".to_string(),
         };
 

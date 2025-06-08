@@ -12,7 +12,7 @@ fn test_game_over_state_displays_winner_message() {
     let view_data = state.get_view_data(&session);
 
     assert!(view_data.is_game_over);
-    assert!(view_data.status_message.contains("Black wins"));
+    assert!(view_data.status_message.contains("White wins"));
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn test_game_over_state_shows_correct_winner_for_black() {
     let state = GameOverState::new(Some(Color::Black));
     let view_data = state.get_view_data(&session);
 
-    assert!(view_data.status_message.contains("White wins"));
+    assert!(view_data.status_message.contains("Black wins"));
 }
 
 #[test]
@@ -61,5 +61,5 @@ fn test_game_over_state_shows_correct_winner_for_white() {
     let state = GameOverState::new(Some(Color::White));
     let view_data = state.get_view_data(&session);
 
-    assert!(view_data.status_message.contains("Black wins"));
+    assert!(view_data.status_message.contains("White wins"));
 }

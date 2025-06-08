@@ -66,12 +66,18 @@ impl State for AITurnState {
                                 }
 
                                 // Check for game over
-                                if session.game.check_winner().is_some()
-                                    || session.game.is_stalemate()
-                                {
+                                if session.game.check_winner().is_some() {
                                     session.game.is_game_over = true;
                                     return StateTransition::To(Box::new(
                                         super::GameOverState::new(session.game.check_winner()),
+                                    ));
+                                } else if session.game.is_stalemate() {
+                                    // If current player has no moves, the other player wins
+                                    session.game.is_game_over = true;
+                                    return StateTransition::To(Box::new(
+                                        super::GameOverState::new(Some(
+                                            session.game.current_player.opposite(),
+                                        )),
                                     ));
                                 }
 
@@ -130,11 +136,16 @@ impl State for AITurnState {
                             session.ai_state.clear_error();
 
                             // Check for game over
-                            if session.game.check_winner().is_some() || session.game.is_stalemate()
-                            {
+                            if session.game.check_winner().is_some() {
                                 session.game.is_game_over = true;
                                 return StateTransition::To(Box::new(super::GameOverState::new(
                                     session.game.check_winner(),
+                                )));
+                            } else if session.game.is_stalemate() {
+                                // If current player has no moves, the other player wins
+                                session.game.is_game_over = true;
+                                return StateTransition::To(Box::new(super::GameOverState::new(
+                                    Some(session.game.current_player.opposite()),
                                 )));
                             }
 

@@ -49,13 +49,17 @@ impl State for PieceSelectedState {
                             // Check if multi-capture continues
                             if continue_capture {
                                 StateTransition::To(Box::new(super::MultiCaptureState::new(cursor)))
-                            } else if session.game.check_winner().is_some()
-                                || session.game.is_stalemate()
-                            {
+                            } else if session.game.check_winner().is_some() {
                                 session.game.is_game_over = true;
                                 StateTransition::To(Box::new(super::GameOverState::new(
                                     session.game.check_winner(),
                                 )))
+                            } else if session.game.is_stalemate() {
+                                // If current player has no moves, the other player wins
+                                session.game.is_game_over = true;
+                                StateTransition::To(Box::new(super::GameOverState::new(Some(
+                                    session.game.current_player.opposite(),
+                                ))))
                             } else {
                                 StateTransition::To(Box::new(super::PlayingState::new()))
                             }
