@@ -1,6 +1,5 @@
 use crate::ai::Hint;
 use crate::core::board::Board;
-use crate::core::move_history::Move;
 use crate::core::piece::Color;
 
 pub struct ViewData<'a> {
@@ -16,8 +15,6 @@ pub struct ViewData<'a> {
     pub error_message: Option<&'a str>,
     pub is_simple_ai: bool,
 
-    #[allow(dead_code)]
-    pub last_move: Option<&'a Move>,
     pub hint: Option<&'a Hint>,
     pub is_game_over: bool,
 

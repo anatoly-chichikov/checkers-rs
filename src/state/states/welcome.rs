@@ -54,7 +54,6 @@ impl State for WelcomeState {
             show_ai_thinking: false,
             error_message: None,
             is_simple_ai: std::env::var("GEMINI_API_KEY").is_err() || std::env::var("GEMINI_MODEL").is_err(),
-            last_move: None,
             hint: None,
             is_game_over: false,
             welcome_content: session.welcome_content.as_ref().map(|content| {

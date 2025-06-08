@@ -9,7 +9,6 @@ pub enum GameError {
     #[error("No piece at selected position")]
     NoPieceSelected,
     #[error("Selected piece belongs to the opponent")]
-    #[allow(dead_code)]
     WrongPieceColor,
     #[error("Invalid move")]
     InvalidMove,
@@ -45,7 +44,6 @@ impl CheckersGame {
         }
     }
 
-    #[allow(dead_code)]
     pub fn validate_piece_selection(&self, row: usize, col: usize) -> Result<(), GameError> {
         if !self.board.in_bounds(row, col) {
             return Err(GameError::OutOfBounds);

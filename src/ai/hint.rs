@@ -11,13 +11,11 @@ use genai::{
 };
 use std::env;
 
-#[allow(dead_code)]
 pub struct HintProvider {
     api_key: String,
     model: String,
 }
 
-#[allow(dead_code)]
 impl HintProvider {
     pub fn new(api_key: String) -> Result<Self, String> {
         let model = env::var("GEMINI_MODEL")

@@ -11,8 +11,7 @@ use ratatui::{
 };
 
 use crate::{
-    ai::Hint,
-    core::{game::CheckersGame, piece::Color},
+    core::piece::Color,
     interface::{
         theme::Theme,
         widgets::{CheckerBoard, GameStatus, HintDisplay, WelcomeScreen},
@@ -63,12 +62,6 @@ impl UI {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn clear(&mut self) -> io::Result<()> {
-        self.terminal.clear()?;
-        Ok(())
-    }
-
     pub fn draw_welcome_screen(
         &mut self,
         did_you_know: &str,
@@ -83,85 +76,6 @@ impl UI {
                 todays_challenge.to_string(),
             ).simple_ai(is_simple_ai);
             f.render_widget(welcome, f.area());
-        })?;
-        Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub fn draw_game(
-        &mut self,
-        game: &CheckersGame,
-        selected_square: Option<(usize, usize)>,
-        possible_moves: &[(usize, usize)],
-        hint: Option<&Hint>,
-        ai_thinking: bool,
-        ai_error: Option<&str>,
-    ) -> io::Result<()> {
-        self.terminal.draw(|f| {
-            // First, create a centered column of fixed width
-            let main_width = 64; // Увеличили ширину для большего "воздуха"
-            let centered_area = if f.area().width >= main_width {
-                Rect {
-                    x: (f.area().width - main_width) / 2,
-                    y: f.area().y,
-                    width: main_width,
-                    height: f.area().height,
-                }
-            } else {
-                f.area() // Fallback if terminal is too narrow
-            };
-
-            // Main layout within the centered area
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Length(1),  // Top separator
-                    Constraint::Length(2),  // Game status (reduced from 3)
-                    Constraint::Length(18), // Board (fixed height instead of Min)
-                    Constraint::Length(1),  // Bottom separator
-                    Constraint::Length(1),  // Controls
-                    Constraint::Length(6),  // Hint area (fixed small height)
-                    Constraint::Min(0),     // Remaining space
-                ])
-                .split(centered_area);
-
-            // Top separator
-            let separator = "═".repeat(64);
-            let sep_widget = Paragraph::new(separator).style(Style::default().fg(Theme::SEPARATOR));
-            f.render_widget(sep_widget, chunks[0]);
-
-            // Game status - no padding, aligned within the 60-char column
-            let status = GameStatus::new(game.current_player)
-                .ai_thinking(ai_thinking)
-                .local_mode(false) // Will be determined by caller
-                .ai_error(ai_error);
-            f.render_widget(status, chunks[1]);
-
-            // Board
-            let board_widget = CheckerBoard::new(&game.board)
-                .cursor_position((0, 0)) // Temporary placeholder
-                .selected_square(selected_square)
-                .possible_moves(possible_moves);
-            f.render_widget(board_widget, chunks[2]);
-
-            // Bottom separator
-            let bottom_sep = "─".repeat(64);
-            let bottom_sep_widget =
-                Paragraph::new(bottom_sep).style(Style::default().fg(Theme::SEPARATOR));
-            f.render_widget(bottom_sep_widget, chunks[3]);
-
-            // Controls
-            let controls = "Controls: ↑↓←→ Move | Space/Enter Select | Q/Esc Quit";
-            let controls_widget = Paragraph::new(controls)
-                .style(Style::default().fg(Theme::TEXT_SECONDARY))
-                .alignment(Alignment::Center);
-            f.render_widget(controls_widget, chunks[4]);
-
-            // Hint
-            if let Some(hint) = hint {
-                let hint_display = HintDisplay::new(Some(&hint.hint));
-                f.render_widget(hint_display, chunks[5]);
-            }
         })?;
         Ok(())
     }

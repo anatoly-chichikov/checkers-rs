@@ -46,7 +46,6 @@ impl State for GameOverState {
             show_ai_thinking: false,
             error_message: None,
             is_simple_ai: std::env::var("GEMINI_API_KEY").is_err() || std::env::var("GEMINI_MODEL").is_err(),
-            last_move: session.game.move_history.get_last_move(),
             hint: None,
             is_game_over: true,
             welcome_content: None,

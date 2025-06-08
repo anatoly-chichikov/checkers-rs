@@ -54,7 +54,6 @@ pub async fn explain_rules() -> Result<String, AIError> {
     }
 }
 
-#[allow(dead_code)]
 pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize, usize)), AIError> {
     dotenv::dotenv().ok();
     let api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
