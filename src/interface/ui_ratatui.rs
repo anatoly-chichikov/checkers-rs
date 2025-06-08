@@ -197,17 +197,42 @@ impl UI {
                 f.area()
             };
 
-            // Main layout within the centered area
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Length(1), // Top separator
-                    Constraint::Length(2), // Game status
-                    Constraint::Min(18),   // Board - use Min to ensure at least 18
-                    Constraint::Length(1), // Bottom separator
-                    Constraint::Length(1), // Controls
-                    Constraint::Max(6),    // Hint area - use Max to limit if needed
-                ])
+            // Calculate dynamic hint height if hint is present
+            let hint_height = if let Some(hint) = view.hint {
+                use ratatui::widgets::{Paragraph, Wrap};
+                
+                // Create a paragraph with the hint text to calculate its wrapped height
+                let paragraph = Paragraph::new(hint.hint.as_str())
+                    .wrap(Wrap { trim: true });
+                
+                // Account for borders (2) + inner padding in HintDisplay (2) = 4
+                let available_width = centered_area.width.saturating_sub(4);
+                
+                // Use ratatui's built-in line_count method to get accurate height
+                let lines = paragraph.line_count(available_width) as u16;
+                
+                // Add 2 for border top/bottom
+                lines + 2
+            } else {
+                0 // No hint, no space needed
+            };
+
+            // Dynamic layout using modern ratatui best practices
+            let mut constraints = vec![
+                Constraint::Length(1), // Top separator ════════════════
+                Constraint::Length(1), // Game status "Current Turn: White"
+                Constraint::Length(1), // One empty line
+                Constraint::Length(18), // Board (requires exactly 18 lines)
+                Constraint::Length(1), // Bottom separator ────────────────
+                Constraint::Length(1), // Controls line
+            ];
+            
+            if hint_height > 0 {
+                constraints.push(Constraint::Length(hint_height)); // Dynamic hint area
+            }
+            constraints.push(Constraint::Fill(1)); // Fill remaining space efficiently
+            
+            let chunks = Layout::vertical(constraints)
                 .split(centered_area);
 
             // Top separator
@@ -222,18 +247,20 @@ impl UI {
                 .ai_error(view.error_message);
             f.render_widget(status, chunks[1]);
 
+            // chunks[2] is the empty line - leave it empty
+            
             // Board
             let board_widget = CheckerBoard::new(view.board)
                 .cursor_position(view.cursor_pos)
                 .selected_square(view.selected_piece)
                 .possible_moves(view.possible_moves);
-            f.render_widget(board_widget, chunks[2]);
+            f.render_widget(board_widget, chunks[3]);
 
             // Bottom separator
             let bottom_sep = "─".repeat(64);
             let bottom_sep_widget =
                 Paragraph::new(bottom_sep).style(Style::default().fg(Theme::SEPARATOR));
-            f.render_widget(bottom_sep_widget, chunks[3]);
+            f.render_widget(bottom_sep_widget, chunks[4]);
 
             // Controls
             let controls = ["↑↓←→ Move", "Space/Enter Select", "ESC/Q Quit"];
@@ -241,12 +268,13 @@ impl UI {
             let controls_widget = Paragraph::new(controls_text)
                 .style(Style::default().fg(Theme::TEXT_PRIMARY))
                 .alignment(Alignment::Center);
-            f.render_widget(controls_widget, chunks[4]);
+            f.render_widget(controls_widget, chunks[5]);
 
-            // Hint
+            // Hint (if present, render in the dynamic area)
             if let Some(hint) = view.hint {
                 let hint_display = HintDisplay::new(Some(&hint.hint));
-                f.render_widget(hint_display, chunks[5]);
+                // Hint is at index 6 if present
+                f.render_widget(hint_display, chunks[6]);
             }
         })?;
         Ok(())

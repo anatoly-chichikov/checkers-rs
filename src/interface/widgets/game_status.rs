@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
-    style::{Color as RatatuiColor, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Paragraph, Widget},
 };
@@ -44,9 +44,7 @@ impl<'a> GameStatus<'a> {
 
 impl<'a> Widget for GameStatus<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let mut lines = vec![];
-
-        // Current turn indicator - Fixed: show actual current player
+        // Only render the main status line to match reference state
         let turn_text = if self.ai_thinking {
             "AI is thinking..."
         } else {
@@ -55,28 +53,13 @@ impl<'a> Widget for GameStatus<'a> {
                 Color::Black => "Current Turn: Black",
             }
         };
-        lines.push(Line::from(Span::styled(
+        
+        let line = Line::from(Span::styled(
             turn_text,
             Style::default().fg(Theme::TEXT_PRIMARY),
-        )));
+        ));
 
-        // Local mode indicator
-        if self.is_local_mode {
-            lines.push(Line::from(Span::styled(
-                "[LOCAL MODE - Playing against another human]",
-                Style::default().fg(Theme::TEXT_ACCENT),
-            )));
-        }
-
-        // AI error message
-        if let Some(error) = self.ai_error {
-            lines.push(Line::from(Span::styled(
-                format!("AI Error: {}", error),
-                Style::default().fg(RatatuiColor::Red),
-            )));
-        }
-
-        let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
+        let paragraph = Paragraph::new(vec![line]).alignment(Alignment::Left);
         paragraph.render(area, buf);
     }
 }
