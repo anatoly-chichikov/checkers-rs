@@ -12,6 +12,7 @@ pub struct WelcomeScreen {
     did_you_know: String,
     tip_of_the_day: String,
     todays_challenge: String,
+    is_simple_ai: bool,
 }
 
 impl WelcomeScreen {
@@ -20,7 +21,13 @@ impl WelcomeScreen {
             did_you_know,
             tip_of_the_day,
             todays_challenge,
+            is_simple_ai: false,
         }
+    }
+
+    pub fn simple_ai(mut self, simple: bool) -> Self {
+        self.is_simple_ai = simple;
+        self
     }
 
     fn wrap_text(&self, text: &str, max_width: usize) -> Vec<String> {
@@ -74,6 +81,11 @@ impl WelcomeScreen {
     }
 
     fn render_did_you_know(&self, area: Rect, buf: &mut Buffer) {
+        // Guard against zero height
+        if area.height < 3 {
+            return;
+        }
+
         let block = Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Theme::BORDER))
@@ -93,6 +105,11 @@ impl WelcomeScreen {
 
         // First render the block
         block.render(area, buf);
+
+        // Guard against no space for content
+        if padded_area.height == 0 || padded_area.width == 0 {
+            return;
+        }
 
         // Then render the paragraph without block in the padded area
         let paragraph = Paragraph::new(Text::from(self.did_you_know.as_str()))
@@ -180,7 +197,13 @@ impl WelcomeScreen {
     }
 
     fn render_instructions(&self, area: Rect, buf: &mut Buffer) {
-        let instructions = Paragraph::new("Press ENTER to begin or Q/ESC to quit...")
+        let text = if self.is_simple_ai {
+            "Press ENTER to play against Simple AI or Q/ESC to quit..."
+        } else {
+            "Press ENTER to play against AI or Q/ESC to quit..."
+        };
+
+        let instructions = Paragraph::new(text)
             .style(Style::default().fg(Theme::TEXT_SECONDARY))
             .alignment(Alignment::Center); // Keep centered for instructions
 
@@ -194,16 +217,16 @@ impl Widget for WelcomeScreen {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(2), // Space before header (increased)
+                Constraint::Length(1), // Space before header
                 Constraint::Length(3), // Header
-                Constraint::Length(1), // Separator (no space between)
-                Constraint::Length(2), // Space after separator
+                Constraint::Length(1), // Separator
+                Constraint::Length(1), // Space after separator
                 Constraint::Length(4), // Did You Know
                 Constraint::Length(1), // Space
-                Constraint::Length(5), // Tip of the Day
+                Constraint::Length(4), // Tip of the Day
                 Constraint::Length(1), // Space
-                Constraint::Length(5), // Today's Challenge
-                Constraint::Length(2), // Space before instructions
+                Constraint::Length(4), // Today's Challenge
+                Constraint::Length(1), // Space before instructions
                 Constraint::Length(1), // Instructions
                 Constraint::Min(0),    // Remaining space
             ])

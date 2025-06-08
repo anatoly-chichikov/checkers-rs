@@ -119,6 +119,37 @@ fn find_capture_moves_recursive(
     }
 }
 
+pub fn find_capture_path(
+    board: &Board,
+    from_row: usize,
+    from_col: usize,
+    to_row: usize,
+    to_col: usize,
+) -> Option<Vec<(usize, usize)>> {
+    let piece = board.get_piece(from_row, from_col)?;
+
+    let mut all_paths = Vec::new();
+    find_capture_moves_recursive(
+        board,
+        from_row,
+        from_col,
+        &piece,
+        Vec::new(),
+        &mut all_paths,
+    );
+
+    // Find a path that ends at the target position
+    for path in all_paths {
+        if let Some(&last_pos) = path.last() {
+            if last_pos == (to_row, to_col) {
+                return Some(path);
+            }
+        }
+    }
+
+    None
+}
+
 pub fn get_all_possible_moves(
     board: &Board,
     piece_row: usize,
@@ -406,6 +437,23 @@ pub fn is_stalemate(board: &Board, current_player: Color) -> bool {
         }
     }
     true
+}
+
+/// Returns all pieces of the given color that can capture
+pub fn get_pieces_with_captures(board: &Board, color: Color) -> Vec<(usize, usize)> {
+    let mut pieces_with_captures = Vec::new();
+
+    for row in 0..board.size {
+        for col in 0..board.size {
+            if let Some(piece) = board.get_piece(row, col) {
+                if piece.color == color && can_piece_capture(board, row, col) {
+                    pieces_with_captures.push((row, col));
+                }
+            }
+        }
+    }
+
+    pieces_with_captures
 }
 
 /// Checks if a player has won the game

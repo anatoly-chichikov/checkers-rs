@@ -13,6 +13,7 @@ pub struct CheckerBoard<'a> {
     cursor_pos: (usize, usize),
     selected_square: Option<(usize, usize)>,
     possible_moves: &'a [(usize, usize)],
+    pieces_with_captures: &'a [(usize, usize)],
 }
 
 impl<'a> CheckerBoard<'a> {
@@ -22,6 +23,7 @@ impl<'a> CheckerBoard<'a> {
             cursor_pos: (0, 0),
             selected_square: None,
             possible_moves: &[],
+            pieces_with_captures: &[],
         }
     }
 
@@ -40,12 +42,18 @@ impl<'a> CheckerBoard<'a> {
         self
     }
 
+    pub fn pieces_with_captures(mut self, pieces: &'a [(usize, usize)]) -> Self {
+        self.pieces_with_captures = pieces;
+        self
+    }
+
     fn render_cell(&self, buf: &mut Buffer, x: u16, y: u16, row: usize, col: usize) {
         let piece = self.board.get_piece(row, col);
         let is_possible_move = self.possible_moves.contains(&(row, col));
+        let must_capture = self.pieces_with_captures.contains(&(row, col));
 
         // Determine cell background
-        let cell_style = if is_possible_move {
+        let cell_style = if is_possible_move || (must_capture && piece.is_some()) {
             Style::default().bg(Theme::POSSIBLE_MOVE)
         } else {
             Style::default()
@@ -114,7 +122,18 @@ impl<'a> Widget for CheckerBoard<'a> {
         let grid_height = 1 + CELL_HEIGHT * 8 + 1; // 1 for column labels, +1 for final border
 
         if area.width < grid_width || area.height < grid_height {
-            return; // Not enough space
+            // Debug: draw error message instead of nothing
+            let msg = format!(
+                "Need {}x{}, got {}x{}",
+                grid_width, grid_height, area.width, area.height
+            );
+            buf.set_string(
+                area.x,
+                area.y,
+                &msg,
+                Style::default().fg(ratatui::style::Color::Red),
+            );
+            return;
         }
 
         // Center the entire grid

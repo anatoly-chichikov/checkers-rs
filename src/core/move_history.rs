@@ -14,7 +14,6 @@ pub struct MoveHistory {
     moves: Vec<Move>,
 }
 
-#[allow(dead_code)]
 impl MoveHistory {
     pub fn new() -> Self {
         MoveHistory { moves: Vec::new() }
@@ -35,18 +34,6 @@ impl MoveHistory {
             captured,
             became_king,
         });
-    }
-
-    pub fn get_all_moves(&self) -> &[Move] {
-        &self.moves
-    }
-
-    pub fn get_last_move(&self) -> Option<&Move> {
-        self.moves.last()
-    }
-
-    pub fn clear(&mut self) {
-        self.moves.clear();
     }
 
     pub fn to_notation(&self) -> String {

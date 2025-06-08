@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
-    style::{Color as RatatuiColor, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Paragraph, Widget},
 };
@@ -14,6 +14,7 @@ pub struct GameStatus<'a> {
     ai_thinking: bool,
     is_local_mode: bool,
     ai_error: Option<&'a str>,
+    is_simple_ai: bool,
 }
 
 impl<'a> GameStatus<'a> {
@@ -23,6 +24,7 @@ impl<'a> GameStatus<'a> {
             ai_thinking: false,
             is_local_mode: false,
             ai_error: None,
+            is_simple_ai: false,
         }
     }
 
@@ -40,39 +42,40 @@ impl<'a> GameStatus<'a> {
         self.ai_error = error;
         self
     }
+
+    pub fn simple_ai(mut self, simple: bool) -> Self {
+        self.is_simple_ai = simple;
+        self
+    }
 }
 
 impl<'a> Widget for GameStatus<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let mut lines = vec![];
-
-        // Current turn indicator - Fixed: show actual current player
-        let turn_text = match self.current_player {
-            Color::White => "Current Turn: White",
-            Color::Black => "Current Turn: Black",
+        let turn_text = if self.ai_thinking {
+            if self.is_simple_ai {
+                "Simple AI is thinking..."
+            } else {
+                "AI is thinking..."
+            }
+        } else {
+            match self.current_player {
+                Color::White => "Current Turn: White",
+                Color::Black => {
+                    if self.is_simple_ai {
+                        "Current Turn: Black (Simple AI)"
+                    } else {
+                        "Current Turn: Black"
+                    }
+                }
+            }
         };
-        lines.push(Line::from(Span::styled(
+
+        let line = Line::from(Span::styled(
             turn_text,
             Style::default().fg(Theme::TEXT_PRIMARY),
-        )));
+        ));
 
-        // Local mode indicator
-        if self.is_local_mode {
-            lines.push(Line::from(Span::styled(
-                "[LOCAL MODE - Playing against another human]",
-                Style::default().fg(Theme::TEXT_ACCENT),
-            )));
-        }
-
-        // AI error message
-        if let Some(error) = self.ai_error {
-            lines.push(Line::from(Span::styled(
-                format!("AI Error: {}", error),
-                Style::default().fg(RatatuiColor::Red),
-            )));
-        }
-
-        let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
+        let paragraph = Paragraph::new(vec![line]).alignment(Alignment::Left);
         paragraph.render(area, buf);
     }
 }
