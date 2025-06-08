@@ -409,6 +409,23 @@ pub fn is_stalemate(board: &Board, current_player: Color) -> bool {
     true
 }
 
+/// Returns all pieces of the given color that can capture
+pub fn get_pieces_with_captures(board: &Board, color: Color) -> Vec<(usize, usize)> {
+    let mut pieces_with_captures = Vec::new();
+
+    for row in 0..board.size {
+        for col in 0..board.size {
+            if let Some(piece) = board.get_piece(row, col) {
+                if piece.color == color && can_piece_capture(board, row, col) {
+                    pieces_with_captures.push((row, col));
+                }
+            }
+        }
+    }
+
+    pieces_with_captures
+}
+
 /// Checks if a player has won the game
 pub fn check_winner(board: &Board) -> Option<Color> {
     let mut white_pieces = false;

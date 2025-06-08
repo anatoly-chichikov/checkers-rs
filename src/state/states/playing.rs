@@ -4,6 +4,12 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct PlayingState;
 
+impl Default for PlayingState {
+    fn default() -> Self {
+        Self
+    }
+}
+
 impl PlayingState {
     pub fn new() -> Self {
         Self
@@ -37,7 +43,12 @@ impl State for PlayingState {
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor_pos = session.ui_state.cursor_pos;
                 if let Some(piece) = session.game.board.get_piece(cursor_pos.0, cursor_pos.1) {
-                    if piece.color == session.game.current_player {
+                    if piece.color == session.game.current_player
+                        && session
+                            .game
+                            .validate_piece_selection(cursor_pos.0, cursor_pos.1)
+                            .is_ok()
+                    {
                         return StateTransition::To(Box::new(super::PieceSelectedState::new(
                             cursor_pos,
                         )));
@@ -59,20 +70,42 @@ impl State for PlayingState {
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
-        ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
-            cursor_pos: session.ui_state.cursor_pos,
-            selected_piece: session.ui_state.selected_piece,
-            possible_moves: &session.ui_state.possible_moves,
-            status_message: format!(
+        use crate::core::game_logic::get_pieces_with_captures;
+
+        let pieces_with_captures = if session.game.has_captures_available() {
+            get_pieces_with_captures(&session.game.board, session.game.current_player)
+        } else {
+            Vec::new()
+        };
+
+        let status_message = if !pieces_with_captures.is_empty() {
+            format!(
+                "{} must capture!",
+                if session.game.current_player == Color::White {
+                    "White"
+                } else {
+                    "Black"
+                }
+            )
+        } else {
+            format!(
                 "{}'s turn",
                 if session.game.current_player == Color::White {
                     "White"
                 } else {
                     "Black"
                 }
-            ),
+            )
+        };
+
+        ViewData {
+            board: &session.game.board,
+            current_player: session.game.current_player,
+            cursor_pos: session.ui_state.cursor_pos,
+            selected_piece: session.ui_state.selected_piece,
+            possible_moves: &session.ui_state.possible_moves,
+            pieces_with_captures,
+            status_message,
             show_ai_thinking: false,
             error_message: None,
             last_move: session.game.move_history.get_last_move(),

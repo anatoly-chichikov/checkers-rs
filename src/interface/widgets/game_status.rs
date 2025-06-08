@@ -53,7 +53,7 @@ impl<'a> Widget for GameStatus<'a> {
                 Color::Black => "Current Turn: Black",
             }
         };
-        
+
         let line = Line::from(Span::styled(
             turn_text,
             Style::default().fg(Theme::TEXT_PRIMARY),

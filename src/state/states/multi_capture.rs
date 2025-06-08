@@ -78,6 +78,7 @@ impl State for MultiCaptureState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: Some(self.capturing_piece),
             possible_moves: &session.ui_state.possible_moves,
+            pieces_with_captures: Vec::new(),
             status_message: "You must continue capturing!".to_string(),
             show_ai_thinking: false,
             error_message: None,

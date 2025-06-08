@@ -39,6 +39,7 @@ impl State for GameOverState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],
+            pieces_with_captures: Vec::new(),
             status_message: message,
             show_ai_thinking: false,
             error_message: None,

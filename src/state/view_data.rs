@@ -9,6 +9,7 @@ pub struct ViewData<'a> {
     pub cursor_pos: (usize, usize),
     pub selected_piece: Option<(usize, usize)>,
     pub possible_moves: &'a [(usize, usize)],
+    pub pieces_with_captures: Vec<(usize, usize)>,
 
     pub status_message: String,
     pub show_ai_thinking: bool,

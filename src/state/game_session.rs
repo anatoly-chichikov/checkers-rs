@@ -13,8 +13,9 @@ pub struct GameSession {
     pub welcome_content: Option<WelcomeContent>,
 }
 
-impl GameSession {
-    pub fn new() -> Self {
+#[allow(clippy::derivable_impls)]
+impl Default for GameSession {
+    fn default() -> Self {
         Self {
             game: CheckersGame::new(),
             ui_state: UIState::new(),
@@ -23,6 +24,12 @@ impl GameSession {
             hint_provider: None,
             welcome_content: None,
         }
+    }
+}
+
+impl GameSession {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn select_piece(&mut self, row: usize, col: usize) -> Result<(), GameError> {

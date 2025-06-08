@@ -88,6 +88,7 @@ impl State for PieceSelectedState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: Some(self.selected_pos),
             possible_moves: &session.ui_state.possible_moves,
+            pieces_with_captures: Vec::new(),
             status_message: "Select a square to move to".to_string(),
             show_ai_thinking: false,
             error_message: None,

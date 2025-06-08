@@ -200,17 +200,16 @@ impl UI {
             // Calculate dynamic hint height if hint is present
             let hint_height = if let Some(hint) = view.hint {
                 use ratatui::widgets::{Paragraph, Wrap};
-                
+
                 // Create a paragraph with the hint text to calculate its wrapped height
-                let paragraph = Paragraph::new(hint.hint.as_str())
-                    .wrap(Wrap { trim: true });
-                
+                let paragraph = Paragraph::new(hint.hint.as_str()).wrap(Wrap { trim: true });
+
                 // Account for borders (2) + inner padding in HintDisplay (2) = 4
                 let available_width = centered_area.width.saturating_sub(4);
-                
+
                 // Use ratatui's built-in line_count method to get accurate height
                 let lines = paragraph.line_count(available_width) as u16;
-                
+
                 // Add 2 for border top/bottom
                 lines + 2
             } else {
@@ -219,21 +218,20 @@ impl UI {
 
             // Dynamic layout using modern ratatui best practices
             let mut constraints = vec![
-                Constraint::Length(1), // Top separator ════════════════
-                Constraint::Length(1), // Game status "Current Turn: White"
-                Constraint::Length(1), // One empty line
+                Constraint::Length(1),  // Top separator ════════════════
+                Constraint::Length(1),  // Game status "Current Turn: White"
+                Constraint::Length(1),  // One empty line
                 Constraint::Length(18), // Board (requires exactly 18 lines)
-                Constraint::Length(1), // Bottom separator ────────────────
-                Constraint::Length(1), // Controls line
+                Constraint::Length(1),  // Bottom separator ────────────────
+                Constraint::Length(1),  // Controls line
             ];
-            
+
             if hint_height > 0 {
                 constraints.push(Constraint::Length(hint_height)); // Dynamic hint area
             }
             constraints.push(Constraint::Fill(1)); // Fill remaining space efficiently
-            
-            let chunks = Layout::vertical(constraints)
-                .split(centered_area);
+
+            let chunks = Layout::vertical(constraints).split(centered_area);
 
             // Top separator
             let separator = "═".repeat(64);
@@ -248,12 +246,13 @@ impl UI {
             f.render_widget(status, chunks[1]);
 
             // chunks[2] is the empty line - leave it empty
-            
+
             // Board
             let board_widget = CheckerBoard::new(view.board)
                 .cursor_position(view.cursor_pos)
                 .selected_square(view.selected_piece)
-                .possible_moves(view.possible_moves);
+                .possible_moves(view.possible_moves)
+                .pieces_with_captures(&view.pieces_with_captures);
             f.render_widget(board_widget, chunks[3]);
 
             // Bottom separator

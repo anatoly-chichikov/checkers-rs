@@ -10,6 +10,12 @@ pub struct WelcomeContent {
     pub todays_challenge: String,
 }
 
+impl Default for WelcomeState {
+    fn default() -> Self {
+        Self
+    }
+}
+
 impl WelcomeState {
     pub fn new() -> Self {
         Self
@@ -43,6 +49,7 @@ impl State for WelcomeState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],
+            pieces_with_captures: Vec::new(),
             status_message: "Welcome to Checkers!".to_string(),
             show_ai_thinking: false,
             error_message: None,

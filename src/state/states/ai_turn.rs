@@ -3,15 +3,14 @@ use crate::core::piece::Color;
 use crate::state::{GameSession, State, StateTransition, ViewData};
 use crossterm::event::KeyEvent;
 
+#[derive(Default)]
 pub struct AITurnState {
     move_requested: bool,
 }
 
 impl AITurnState {
     pub fn new() -> Self {
-        Self {
-            move_requested: false,
-        }
+        Self::default()
     }
 }
 
@@ -168,6 +167,7 @@ impl State for AITurnState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],
+            pieces_with_captures: Vec::new(),
             status_message: "AI is thinking...".to_string(),
             show_ai_thinking: true,
             error_message: session.ai_state.last_error.as_deref(),
