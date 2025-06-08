@@ -28,18 +28,18 @@ fn test_game_over_state_displays_stalemate_message() {
 }
 
 #[test]
-fn test_game_over_state_exits_on_any_key() {
+fn test_game_over_state_exits_only_on_esc() {
     let mut session = GameSession::new();
     let mut state = GameOverState::new(Some(Color::Black));
 
     let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Enter));
-    assert_eq!(transition, StateTransition::Exit);
+    assert_eq!(transition, StateTransition::None);
 
     let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Esc));
     assert_eq!(transition, StateTransition::Exit);
 
     let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Char('a')));
-    assert_eq!(transition, StateTransition::Exit);
+    assert_eq!(transition, StateTransition::None);
 }
 
 #[test]

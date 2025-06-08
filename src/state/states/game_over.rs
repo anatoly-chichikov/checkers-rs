@@ -1,6 +1,6 @@
 use crate::core::piece::Color;
 use crate::state::{GameSession, State, StateTransition, ViewData};
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct GameOverState {
     winner: Option<Color>,
@@ -13,9 +13,11 @@ impl GameOverState {
 }
 
 impl State for GameOverState {
-    fn handle_input(&mut self, _session: &mut GameSession, _key: KeyEvent) -> StateTransition {
-        // Exit on any key press
-        StateTransition::Exit
+    fn handle_input(&mut self, _session: &mut GameSession, key: KeyEvent) -> StateTransition {
+        match key.code {
+            KeyCode::Esc => StateTransition::Exit,
+            _ => StateTransition::None,
+        }
     }
 
     fn on_enter(&mut self, _session: &mut GameSession) {
@@ -28,9 +30,9 @@ impl State for GameOverState {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         let message = match self.winner {
-            Some(Color::White) => "White wins!".to_string(),
-            Some(Color::Black) => "Black wins!".to_string(),
-            None => "Stalemate! No possible moves.".to_string(),
+            Some(Color::White) => "White wins! Press ESC to exit".to_string(),
+            Some(Color::Black) => "Black wins! Press ESC to exit".to_string(),
+            None => "Stalemate! No possible moves. Press ESC to exit".to_string(),
         };
 
         ViewData {

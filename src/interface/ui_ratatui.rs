@@ -174,9 +174,9 @@ impl UI {
         // Check if it's game over
         if view.is_game_over {
             let winner = if view.status_message.contains("Black wins") {
-                Some(Color::White)
-            } else if view.status_message.contains("White wins") {
                 Some(Color::Black)
+            } else if view.status_message.contains("White wins") {
+                Some(Color::White)
             } else {
                 None
             };
@@ -282,51 +282,58 @@ impl UI {
     fn draw_game_over(&mut self, winner: Option<Color>) -> io::Result<()> {
         self.terminal.draw(|f| {
             let message = match winner {
-                Some(Color::Black) => "White wins!",
-                Some(Color::White) => "Black wins!",
+                Some(Color::Black) => "Black wins!",
+                Some(Color::White) => "White wins!",
                 None => "Stalemate! No possible moves.",
             };
-
-            let text = vec![
-                Line::from(""),
-                Line::from(Span::styled(
-                    "Game Over",
-                    Style::default().fg(RatatuiColor::Yellow),
-                )),
-                Line::from(""),
-                Line::from(Span::styled(
-                    message,
-                    Style::default().fg(RatatuiColor::Green),
-                )),
-                Line::from(""),
-                Line::from(Span::styled(
-                    "Press any key to exit...",
-                    Style::default().fg(RatatuiColor::White),
-                )),
-            ];
 
             let block = Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(RatatuiColor::Magenta));
 
-            let area = centered_rect(50, 40, f.area());
+            let area = centered_rect(50, 20, f.area());
 
-            // Calculate inner area for padding
+            // Calculate inner area
             let inner = block.inner(area);
-            let padded_area = Rect {
-                x: inner.x + 1,
-                y: inner.y,
-                width: inner.width.saturating_sub(2),
-                height: inner.height,
-            };
+            
+            // Create vertical layout for centering
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(1),  // Top padding
+                    Constraint::Length(1),  // "Game Over"
+                    Constraint::Length(1),  // Space
+                    Constraint::Length(1),  // Winner message
+                    Constraint::Length(1),  // Space
+                    Constraint::Length(1),  // "Press ESC to exit..."
+                    Constraint::Min(0),     // Bottom padding
+                ])
+                .split(inner);
 
             // First render the block
             f.render_widget(block, area);
 
-            // Then render the paragraph without block in the padded area
-            let paragraph = Paragraph::new(text).alignment(Alignment::Center);
+            // Render each line in its chunk
+            let game_over_line = Paragraph::new(Line::from(vec![Span::styled(
+                "Game Over",
+                Style::default().fg(RatatuiColor::Yellow),
+            )]))
+            .alignment(Alignment::Center);
+            f.render_widget(game_over_line, chunks[1]);
 
-            f.render_widget(paragraph, padded_area);
+            let winner_line = Paragraph::new(Line::from(vec![Span::styled(
+                message,
+                Style::default().fg(RatatuiColor::Green),
+            )]))
+            .alignment(Alignment::Center);
+            f.render_widget(winner_line, chunks[3]);
+
+            let exit_line = Paragraph::new(Line::from(vec![Span::styled(
+                "Press ESC to exit...",
+                Style::default().fg(RatatuiColor::White),
+            )]))
+            .alignment(Alignment::Center);
+            f.render_widget(exit_line, chunks[5]);
         })?;
         Ok(())
     }
