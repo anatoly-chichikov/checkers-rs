@@ -74,13 +74,14 @@ impl UI {
         did_you_know: &str,
         tip_of_the_day: &str,
         todays_challenge: &str,
+        is_simple_ai: bool,
     ) -> io::Result<()> {
         self.terminal.draw(|f| {
             let welcome = WelcomeScreen::new(
                 did_you_know.to_string(),
                 tip_of_the_day.to_string(),
                 todays_challenge.to_string(),
-            );
+            ).simple_ai(is_simple_ai);
             f.render_widget(welcome, f.area());
         })?;
         Ok(())
@@ -168,7 +169,7 @@ impl UI {
     pub fn draw_view_data(&mut self, view: &crate::state::ViewData) -> io::Result<()> {
         // Check if it's a welcome screen
         if let Some((did_you_know, tip, challenge)) = view.welcome_content {
-            return self.draw_welcome_screen(did_you_know, tip, challenge);
+            return self.draw_welcome_screen(did_you_know, tip, challenge, view.is_simple_ai);
         }
 
         // Check if it's game over
@@ -242,7 +243,8 @@ impl UI {
             let status = GameStatus::new(view.current_player)
                 .ai_thinking(view.show_ai_thinking)
                 .local_mode(false)
-                .ai_error(view.error_message);
+                .ai_error(view.error_message)
+                .simple_ai(view.is_simple_ai);
             f.render_widget(status, chunks[1]);
 
             // chunks[2] is the empty line - leave it empty

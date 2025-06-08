@@ -32,8 +32,11 @@ A terminal-based Checkers game built with Rust.
    ```
 
 **Game Modes:**
-- **With AI (requires API key):** Human plays as White vs AI as Black
-- **Two-player mode (no API key):** Players take turns on the same keyboard
+- **With Gemini AI:** Human plays as White vs AI as Black (requires API key)
+- **With Simple AI:** Human plays as White vs built-in AI as Black (no API key needed)
+  - The built-in AI makes valid moves following all checkers rules
+  - Prioritizes captures when available
+  - Perfect for offline play or testing
 
 **Controls:**
 - **Arrow keys:** Navigate the board
@@ -56,7 +59,7 @@ To enable AI opponent and hints, create a `.env` file:
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.0-flash-lite  # Recommended model
 ```
-*Without an API key, the game runs in two-player mode without AI features*
+*Without an API key, the game uses a built-in Simple AI opponent*
 
 **Testing:**
 ```bash

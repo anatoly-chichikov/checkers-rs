@@ -182,6 +182,7 @@ impl State for AITurnState {
             status_message: "AI is thinking...".to_string(),
             show_ai_thinking: true,
             error_message: session.ai_state.last_error.as_deref(),
+            is_simple_ai: std::env::var("GEMINI_API_KEY").is_err() || std::env::var("GEMINI_MODEL").is_err(),
             last_move: session.game.move_history.get_last_move(),
             hint: session.hint.as_ref(),
             is_game_over: false,

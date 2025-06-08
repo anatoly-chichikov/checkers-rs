@@ -12,6 +12,7 @@ pub struct WelcomeScreen {
     did_you_know: String,
     tip_of_the_day: String,
     todays_challenge: String,
+    is_simple_ai: bool,
 }
 
 impl WelcomeScreen {
@@ -20,7 +21,13 @@ impl WelcomeScreen {
             did_you_know,
             tip_of_the_day,
             todays_challenge,
+            is_simple_ai: false,
         }
+    }
+    
+    pub fn simple_ai(mut self, simple: bool) -> Self {
+        self.is_simple_ai = simple;
+        self
     }
 
     fn wrap_text(&self, text: &str, max_width: usize) -> Vec<String> {
@@ -190,7 +197,13 @@ impl WelcomeScreen {
     }
 
     fn render_instructions(&self, area: Rect, buf: &mut Buffer) {
-        let instructions = Paragraph::new("Press ENTER to begin or Q/ESC to quit...")
+        let text = if self.is_simple_ai {
+            "Press ENTER to play against Simple AI or Q/ESC to quit..."
+        } else {
+            "Press ENTER to play against AI or Q/ESC to quit..."
+        };
+        
+        let instructions = Paragraph::new(text)
             .style(Style::default().fg(Theme::TEXT_SECONDARY))
             .alignment(Alignment::Center); // Keep centered for instructions
 

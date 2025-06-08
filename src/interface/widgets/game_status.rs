@@ -14,6 +14,7 @@ pub struct GameStatus<'a> {
     ai_thinking: bool,
     is_local_mode: bool,
     ai_error: Option<&'a str>,
+    is_simple_ai: bool,
 }
 
 impl<'a> GameStatus<'a> {
@@ -23,6 +24,7 @@ impl<'a> GameStatus<'a> {
             ai_thinking: false,
             is_local_mode: false,
             ai_error: None,
+            is_simple_ai: false,
         }
     }
 
@@ -40,17 +42,31 @@ impl<'a> GameStatus<'a> {
         self.ai_error = error;
         self
     }
+    
+    pub fn simple_ai(mut self, simple: bool) -> Self {
+        self.is_simple_ai = simple;
+        self
+    }
 }
 
 impl<'a> Widget for GameStatus<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        // Only render the main status line to match reference state
         let turn_text = if self.ai_thinking {
-            "AI is thinking..."
+            if self.is_simple_ai {
+                "Simple AI is thinking..."
+            } else {
+                "AI is thinking..."
+            }
         } else {
             match self.current_player {
                 Color::White => "Current Turn: White",
-                Color::Black => "Current Turn: Black",
+                Color::Black => {
+                    if self.is_simple_ai {
+                        "Current Turn: Black (Simple AI)"
+                    } else {
+                        "Current Turn: Black"
+                    }
+                }
             }
         };
 

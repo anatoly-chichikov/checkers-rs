@@ -70,7 +70,7 @@ impl Application {
                 }
             }
             Err(AIError::NoApiKey) | Err(AIError::NoModel) => {
-                eprintln!("Note: Add GEMINI_API_KEY and GEMINI_MODEL to your .env file to enable AI-powered content.");
+                // Silently fall back to default content
                 Self::default_welcome_content()
             }
             Err(e) => {

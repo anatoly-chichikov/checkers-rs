@@ -96,6 +96,7 @@ impl State for PieceSelectedState {
             status_message: "Select a square to move to".to_string(),
             show_ai_thinking: false,
             error_message: None,
+            is_simple_ai: std::env::var("GEMINI_API_KEY").is_err() || std::env::var("GEMINI_MODEL").is_err(),
             last_move: session.game.move_history.get_last_move(),
             hint: session.hint.as_ref(),
             is_game_over: false,

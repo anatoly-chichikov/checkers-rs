@@ -14,6 +14,7 @@ pub struct ViewData<'a> {
     pub status_message: String,
     pub show_ai_thinking: bool,
     pub error_message: Option<&'a str>,
+    pub is_simple_ai: bool,
 
     #[allow(dead_code)]
     pub last_move: Option<&'a Move>,
