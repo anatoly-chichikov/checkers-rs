@@ -45,7 +45,8 @@ impl State for GameOverState {
             status_message: message,
             show_ai_thinking: false,
             error_message: None,
-            is_simple_ai: std::env::var("GEMINI_API_KEY").is_err() || std::env::var("GEMINI_MODEL").is_err(),
+            is_simple_ai: std::env::var("GEMINI_API_KEY").is_err()
+                || std::env::var("GEMINI_MODEL").is_err(),
             hint: None,
             is_game_over: true,
             welcome_content: None,

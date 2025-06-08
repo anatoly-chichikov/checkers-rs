@@ -74,7 +74,8 @@ impl UI {
                 did_you_know.to_string(),
                 tip_of_the_day.to_string(),
                 todays_challenge.to_string(),
-            ).simple_ai(is_simple_ai);
+            )
+            .simple_ai(is_simple_ai);
             f.render_widget(welcome, f.area());
         })?;
         Ok(())

@@ -22,7 +22,10 @@ fn test_welcome_state_transitions_to_playing_on_enter() {
 
     match transition {
         StateTransition::To(next_state) => {
-            assert_eq!(next_state.state_type(), checkers_rs::state::StateType::Playing);
+            assert_eq!(
+                next_state.state_type(),
+                checkers_rs::state::StateType::Playing
+            );
         }
         _ => panic!("Expected transition to PlayingState"),
     }
@@ -139,4 +142,3 @@ fn test_welcome_state_view_data() {
     assert!(view.error_message.is_none());
     assert!(view.hint.is_none());
 }
-

@@ -42,7 +42,7 @@ impl<'a> GameStatus<'a> {
         self.ai_error = error;
         self
     }
-    
+
     pub fn simple_ai(mut self, simple: bool) -> Self {
         self.is_simple_ai = simple;
         self

@@ -36,7 +36,6 @@ impl MoveHistory {
         });
     }
 
-
     pub fn to_notation(&self) -> String {
         self.moves
             .iter()

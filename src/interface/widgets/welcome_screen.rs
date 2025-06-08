@@ -24,7 +24,7 @@ impl WelcomeScreen {
             is_simple_ai: false,
         }
     }
-    
+
     pub fn simple_ai(mut self, simple: bool) -> Self {
         self.is_simple_ai = simple;
         self
@@ -202,7 +202,7 @@ impl WelcomeScreen {
         } else {
             "Press ENTER to play against AI or Q/ESC to quit..."
         };
-        
+
         let instructions = Paragraph::new(text)
             .style(Style::default().fg(Theme::TEXT_SECONDARY))
             .alignment(Alignment::Center); // Keep centered for instructions
