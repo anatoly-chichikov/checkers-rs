@@ -119,6 +119,37 @@ fn find_capture_moves_recursive(
     }
 }
 
+pub fn find_capture_path(
+    board: &Board,
+    from_row: usize,
+    from_col: usize,
+    to_row: usize,
+    to_col: usize,
+) -> Option<Vec<(usize, usize)>> {
+    let piece = board.get_piece(from_row, from_col)?;
+
+    let mut all_paths = Vec::new();
+    find_capture_moves_recursive(
+        board,
+        from_row,
+        from_col,
+        &piece,
+        Vec::new(),
+        &mut all_paths,
+    );
+
+    // Find a path that ends at the target position
+    for path in all_paths {
+        if let Some(&last_pos) = path.last() {
+            if last_pos == (to_row, to_col) {
+                return Some(path);
+            }
+        }
+    }
+
+    None
+}
+
 pub fn get_all_possible_moves(
     board: &Board,
     piece_row: usize,

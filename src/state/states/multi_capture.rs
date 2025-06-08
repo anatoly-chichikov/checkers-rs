@@ -33,8 +33,8 @@ impl State for MultiCaptureState {
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor = session.ui_state.cursor_pos;
                 if session.ui_state.possible_moves.contains(&cursor) {
-                    match session.make_move(cursor.0, cursor.1) {
-                        Ok(continue_capture) => {
+                    match session.try_multicapture_move(cursor.0, cursor.1) {
+                        Ok((continue_capture, _positions)) => {
                             // Check if capture continues
                             if continue_capture {
                                 self.capturing_piece = cursor;

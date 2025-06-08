@@ -41,8 +41,8 @@ impl State for PieceSelectedState {
 
                 // Try move
                 if session.ui_state.possible_moves.contains(&cursor) {
-                    match session.make_move(cursor.0, cursor.1) {
-                        Ok(continue_capture) => {
+                    match session.try_multicapture_move(cursor.0, cursor.1) {
+                        Ok((continue_capture, _positions)) => {
                             // Clear hint after player move
                             session.hint = None;
 
