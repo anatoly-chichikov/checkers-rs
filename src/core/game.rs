@@ -1,5 +1,5 @@
 use crate::core::board::Board;
-use crate::core::game_logic::{self, can_piece_capture, get_all_possible_moves};
+use crate::core::game_logic::{self, can_piece_capture};
 use crate::core::move_history::MoveHistory;
 use crate::core::piece::Color;
 use thiserror::Error;
@@ -9,6 +9,7 @@ pub enum GameError {
     #[error("No piece at selected position")]
     NoPieceSelected,
     #[error("Selected piece belongs to the opponent")]
+    #[allow(dead_code)]
     WrongPieceColor,
     #[error("Invalid move")]
     InvalidMove,
@@ -18,15 +19,12 @@ pub enum GameError {
     OutOfBounds,
 }
 
+#[derive(Clone)]
 pub struct CheckersGame {
     pub board: Board,
     pub current_player: Color,
     pub is_game_over: bool,
-    pub selected_piece: Option<(usize, usize)>,
-    pub possible_moves: Option<Vec<(usize, usize)>>,
-    pub ai_thinking: bool,
     pub move_history: MoveHistory,
-    pub ai_error: Option<String>,
 }
 
 impl Default for CheckersGame {
@@ -43,23 +41,14 @@ impl CheckersGame {
             board,
             current_player: Color::White,
             is_game_over: false,
-            selected_piece: None,
-            possible_moves: None,
-            ai_thinking: false,
             move_history: MoveHistory::new(),
-            ai_error: None,
         }
     }
 
-    pub fn select_piece(&mut self, row: usize, col: usize) -> Result<(), GameError> {
+    #[allow(dead_code)]
+    pub fn validate_piece_selection(&self, row: usize, col: usize) -> Result<(), GameError> {
         if !self.board.in_bounds(row, col) {
             return Err(GameError::OutOfBounds);
-        }
-
-        if self.selected_piece == Some((row, col)) {
-            self.selected_piece = None;
-            self.possible_moves = None;
-            return Ok(());
         }
 
         match self.board.get_piece(row, col) {
@@ -67,8 +56,6 @@ impl CheckersGame {
                 if self.has_captures_available() && !can_piece_capture(&self.board, row, col) {
                     return Err(GameError::ForcedCaptureAvailable);
                 }
-                self.selected_piece = Some((row, col));
-                self.possible_moves = Some(get_all_possible_moves(&self.board, row, col));
                 Ok(())
             }
             Some(_) => Err(GameError::WrongPieceColor),
@@ -76,8 +63,7 @@ impl CheckersGame {
         }
     }
 
-    pub fn make_move(&mut self, to_row: usize, to_col: usize) -> Result<(), GameError> {
-        let (from_row, from_col) = self.selected_piece.ok_or(GameError::NoPieceSelected)?;
+    pub fn make_move(&mut self, from_row: usize, from_col: usize, to_row: usize, to_col: usize) -> Result<bool, GameError> {
 
         if !self.board.in_bounds(to_row, to_col) {
             return Err(GameError::OutOfBounds);
@@ -129,17 +115,13 @@ impl CheckersGame {
             became_king,
         );
 
-        if row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col)
-        {
-            self.selected_piece = Some((to_row, to_col));
-            self.possible_moves = Some(get_all_possible_moves(&self.board, to_row, to_col));
-            return Ok(());
+        let continue_capture = row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col);
+        
+        if !continue_capture {
+            self.switch_player();
         }
-
-        self.selected_piece = None;
-        self.possible_moves = None;
-        self.switch_player();
-        Ok(())
+        
+        Ok(continue_capture)
     }
 
     pub fn switch_player(&mut self) {

@@ -114,7 +114,10 @@ impl<'a> Widget for CheckerBoard<'a> {
         let grid_height = 1 + CELL_HEIGHT * 8 + 1; // 1 for column labels, +1 for final border
 
         if area.width < grid_width || area.height < grid_height {
-            return; // Not enough space
+            // Debug: draw error message instead of nothing
+            let msg = format!("Need {}x{}, got {}x{}", grid_width, grid_height, area.width, area.height);
+            buf.set_string(area.x, area.y, &msg, Style::default().fg(ratatui::style::Color::Red));
+            return;
         }
 
         // Center the entire grid

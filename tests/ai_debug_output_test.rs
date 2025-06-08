@@ -1,5 +1,5 @@
-use checkers_rs::ai::genai_client::get_ai_move;
-use checkers_rs::core::game::CheckersGame;
+use checkers_rs::ai::get_ai_move;
+use checkers_rs::state::GameSession;
 use std::env;
 use tokio;
 
@@ -30,15 +30,15 @@ async fn test_ai_move_without_debug_output() {
     }
 
     // Set up a game where it's Black's turn
-    let mut game = CheckersGame::new();
+    let mut session = GameSession::new();
 
     // First make a white move
-    game.select_piece(5, 0).unwrap();
-    game.make_move(4, 1).unwrap();
+    session.select_piece(5, 0).unwrap();
+    session.make_move(4, 1).unwrap();
 
     // Now it's Black's turn - call get_ai_move
     // In the fixed version, this should not print debug output
-    match get_ai_move(&game).await {
+    match get_ai_move(&session.game).await {
         Ok(_) => {
             // Success - but we need to verify no debug output was printed
             // This is hard to test directly, but the test documents the issue

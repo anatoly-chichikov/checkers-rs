@@ -12,8 +12,10 @@ pub enum AIError {
     #[error("Model not specified - add GEMINI_MODEL to your .env file")]
     NoModel,
     #[error("AI response format is invalid: {0}")]
+    #[allow(dead_code)]
     InvalidResponseFormat(String),
     #[error("No possible moves available for the AI.")]
+    #[allow(dead_code)]
     NoPossibleMoves,
     #[error("IO error: {0}")]
     IOError(#[from] io::Error),

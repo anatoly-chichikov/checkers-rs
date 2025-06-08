@@ -246,6 +246,7 @@ pub fn is_valid_move(
 }
 
 /// Checks if a piece can make a capture
+#[allow(dead_code)]
 pub fn can_piece_capture(board: &Board, piece_row: usize, piece_col: usize) -> bool {
     if let Some(piece) = board.get_piece(piece_row, piece_col) {
         let directions = if piece.is_king {

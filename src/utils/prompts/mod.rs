@@ -4,10 +4,12 @@ pub fn get_story() -> &'static str {
     include_str!("story.txt")
 }
 
+#[allow(dead_code)]
 pub fn get_hint_prompt() -> &'static str {
     include_str!("hint.txt")
 }
 
+#[allow(dead_code)]
 pub fn get_ai_move_prompt() -> &'static str {
     include_str!("ai_move.txt")
 }

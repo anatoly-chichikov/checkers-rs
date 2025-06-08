@@ -47,9 +47,13 @@ impl<'a> Widget for GameStatus<'a> {
         let mut lines = vec![];
 
         // Current turn indicator - Fixed: show actual current player
-        let turn_text = match self.current_player {
-            Color::White => "Current Turn: White",
-            Color::Black => "Current Turn: Black",
+        let turn_text = if self.ai_thinking {
+            "AI is thinking..."
+        } else {
+            match self.current_player {
+                Color::White => "Current Turn: White",
+                Color::Black => "Current Turn: Black",
+            }
         };
         lines.push(Line::from(Span::styled(
             turn_text,

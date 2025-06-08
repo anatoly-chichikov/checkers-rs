@@ -1,3 +1,4 @@
+use crate::ai::formatting::{format_board, format_square};
 use crate::ai::ui::{start_loading_animation, stop_loading_animation};
 use crate::core::{
     board::Board, game_logic::get_all_valid_moves_for_player, move_history::MoveHistory,
@@ -10,35 +11,14 @@ use genai::{
 };
 use std::env;
 
-fn format_square(row: usize, col: usize) -> String {
-    // Convert internal row (0=top, 7=bottom) to display row (8=top, 1=bottom)
-    format!("{}{}", (col as u8 + b'A') as char, 8 - row)
-}
 
-fn format_board(board: &Board) -> String {
-    let mut board_str = String::new();
-    board_str.push_str("  A B C D E F G H\n");
-    for r in 0..board.size {
-        // Convert internal row (0=top, 7=bottom) to display row (8=top, 1=bottom)
-        board_str.push_str(&format!("{} ", 8 - r));
-        for c in 0..board.size {
-            let piece_str: String = match board.get_piece(r, c) {
-                Some(piece) => piece.display(),
-                None => ".".to_string(),
-            };
-            board_str.push_str(&piece_str);
-            board_str.push(' ');
-        }
-        board_str.push('\n');
-    }
-    board_str
-}
-
+#[allow(dead_code)]
 pub struct HintProvider {
     api_key: String,
     model: String,
 }
 
+#[allow(dead_code)]
 impl HintProvider {
     pub fn new(api_key: String) -> Result<Self, String> {
         let model = env::var("GEMINI_MODEL")

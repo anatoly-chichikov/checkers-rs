@@ -1,15 +1,17 @@
 mod ai;
 mod core;
 mod interface;
+mod state;
 mod utils;
 
-use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
-use crate::ai::{explain_rules, get_ai_move, hint::HintProvider, AIError, Hint};
-use crate::core::{game::CheckersGame, piece::Color};
+use std::env;
+
+use crate::ai::{explain_rules, AIError, hint::HintProvider};
+use crate::core::piece::Color;
 use crate::interface::ui_ratatui::{Input, UI};
+use crate::state::{GameSession, StateMachine, states::{WelcomeState, WelcomeContent}};
+use crossterm::event::{KeyCode, KeyEvent};
 
 async fn get_welcome_content() -> (String, String, String) {
     match explain_rules().await {
@@ -68,173 +70,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get welcome content
     let (did_you_know, tip_of_the_day, todays_challenge) = get_welcome_content().await;
 
-    // Display welcome screen
-    ui.draw_welcome_screen(&did_you_know, &tip_of_the_day, &todays_challenge)?;
-
-    // Wait for user input
+    // Initialize state machine with welcome state
+    let mut session = GameSession::new();
+    session.welcome_content = Some(WelcomeContent {
+        did_you_know: did_you_know.clone(),
+        tip_of_the_day: tip_of_the_day.clone(),
+        todays_challenge: todays_challenge.clone(),
+    });
+    
+    // Initialize hint provider if API key is available
+    if let Ok(api_key) = env::var("GEMINI_API_KEY") {
+        if env::var("GEMINI_MODEL").is_ok() {
+            if let Ok(provider) = HintProvider::new(api_key) {
+                session.hint_provider = Some(provider);
+            }
+        }
+    }
+    
+    let mut state_machine = StateMachine::new(Box::new(WelcomeState::new()));
+    
+    // Main state machine loop
     loop {
-        match ui.get_input()? {
-            Input::Select => break, // ENTER pressed
-            Input::Quit => {
-                ui.restore()?;
-                return Ok(());
-            }
-            _ => {} // Ignore other inputs
+        let view = state_machine.get_view_data(&session);
+        ui.draw_view_data(&view)?;
+        
+        // Add small delay to see welcome screen
+        if state_machine.current_state_name() == "WelcomeState" {
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
-    }
-
-    // Setup Ctrl-C handler
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    })?;
-
-    // Initialize game
-    let mut game = CheckersGame::new();
-    let mut current_hint: Option<Hint> = None;
-
-    // Check if AI mode is available
-    let api_key = env::var("GEMINI_API_KEY").ok();
-    let model = env::var("GEMINI_MODEL").ok();
-    let ai_enabled = api_key.is_some() && model.is_some();
-    let hint_provider = api_key
-        .as_ref()
-        .and_then(|key| HintProvider::new(key.clone()).ok());
-
-    // Main game loop
-    while running.load(Ordering::SeqCst) && !game.is_game_over {
-        // Draw the game
-        ui.draw_game(
-            &game,
-            game.selected_piece,
-            game.possible_moves.as_ref().unwrap_or(&Vec::new()),
-            current_hint.as_ref(),
-            game.ai_thinking,
-            game.ai_error.as_deref(),
-        )?;
-
-        // Handle AI turn
-        if ai_enabled && game.current_player == Color::Black {
-            game.ai_thinking = true;
-            ui.draw_game(
-                &game,
-                game.selected_piece,
-                game.possible_moves.as_ref().unwrap_or(&Vec::new()),
-                current_hint.as_ref(),
-                game.ai_thinking,
-                game.ai_error.as_deref(),
-            )?;
-
-            match get_ai_move(&game).await {
-                Ok(((from_row, from_col), (to_row, to_col))) => {
-                    game.ai_thinking = false;
-                    if let Err(e) = game.select_piece(from_row, from_col) {
-                        game.ai_error = Some(format!("AI failed to select piece: {}", e));
-                        game.switch_player();
-                    } else if let Err(e) = game.make_move(to_row, to_col) {
-                        game.ai_error = Some(format!("AI failed to move: {}", e));
-                        if game.current_player == Color::Black {
-                            game.switch_player();
-                        }
-                    } else {
-                        game.ai_error = None;
-                        // Check for game over
-                        if game.check_winner().is_some() || game.is_stalemate() {
-                            game.is_game_over = true;
-                        }
-                        // Update hint after AI move
-                        if let Some(ref provider) = hint_provider {
-                            if game.current_player == Color::White && !game.is_game_over {
-                                match provider
-                                    .get_hint(&game.board, Color::White, &game.move_history)
-                                    .await
-                                {
-                                    Ok(hint_text) => {
-                                        current_hint = Some(Hint { hint: hint_text });
-                                    }
-                                    Err(_) => {
-                                        current_hint = None;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    game.ai_thinking = false;
-                    game.ai_error = Some(format!("AI Error: {}", e));
-                    game.switch_player();
+        
+        // Check if current state is AITurnState or if we need to transition to AI turn
+        let current_state = state_machine.current_state_name();
+        let is_ai_turn = current_state == "AITurnState";
+        let should_check_ai_transition = current_state == "PlayingState" && session.game.current_player == Color::Black;
+        
+        
+        if is_ai_turn || should_check_ai_transition {
+            // For AI turn or potential AI turn, use non-blocking input and always trigger handle_input
+            if let Ok(Some(input)) = ui.poll_input() {
+                if matches!(input, Input::Quit) {
+                    break;
                 }
             }
-            game.ai_thinking = false;
-            continue; // Skip input handling for AI turn
-        }
-
-        // Handle player input
-        let input = ui.get_input()?;
-        match input {
-            Input::Up | Input::Down | Input::Left | Input::Right => {
-                ui.move_cursor(input);
+            // Always call handle_input to let state machine progress (only for AI)
+            if is_ai_turn {
+                state_machine.handle_input(&mut session, KeyEvent::from(KeyCode::Char(' ')));
             }
-            Input::Select => {
-                let cursor_pos = ui.get_cursor_position();
-
-                // If we have a selected piece
-                if let Some(selected) = game.selected_piece {
-                    // Check if clicking on the same piece (deselect)
-                    if selected == cursor_pos {
-                        game.selected_piece = None;
-                        game.possible_moves = None;
-                    }
-                    // Check if clicking on a possible move
-                    else if let Some(ref moves) = game.possible_moves {
-                        if moves.contains(&cursor_pos) {
-                            // Make the move
-                            if let Err(e) = game.make_move(cursor_pos.0, cursor_pos.1) {
-                                // Handle error (could show in UI)
-                                eprintln!("Move failed: {}", e);
-                            } else {
-                                // Check for game over
-                                if game.check_winner().is_some() || game.is_stalemate() {
-                                    game.is_game_over = true;
-                                }
-                                // Clear hint after player move
-                                current_hint = None;
-                            }
-                        } else {
-                            // Try to select a new piece
-                            game.selected_piece = None;
-                            if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
-                                // Selection successful
-                            }
-                        }
-                    }
+            
+            // Small delay to prevent busy loop
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        } else {
+            // For other states, use blocking input
+            if let Ok(input) = ui.get_input() {
+                let key_event = match input {
+                    Input::Up => KeyEvent::from(KeyCode::Up),
+                    Input::Down => KeyEvent::from(KeyCode::Down),
+                    Input::Left => KeyEvent::from(KeyCode::Left),
+                    Input::Right => KeyEvent::from(KeyCode::Right),
+                    Input::Select => KeyEvent::from(KeyCode::Enter),
+                    Input::Quit => KeyEvent::from(KeyCode::Esc),
+                };
+                state_machine.handle_input(&mut session, key_event);
+                
+                // Check if we should exit
+                if matches!(input, Input::Quit) {
+                    break;
                 }
-                // No piece selected, try to select one
-                else if let Ok(()) = game.select_piece(cursor_pos.0, cursor_pos.1) {
-                    // Selection successful
-                }
-            }
-            Input::Quit => break,
-        }
-    }
-
-    // Show game over screen
-    if game.is_game_over {
-        let winner = game.check_winner();
-        ui.draw_game_over(winner)?;
-
-        // Wait for any key
-        loop {
-            match ui.get_input()? {
-                Input::Quit | Input::Select => break,
-                _ => {}
             }
         }
     }
-
-    // Restore terminal
+    
     ui.restore()?;
     Ok(())
 }
