@@ -1,4 +1,4 @@
-use crate::state::{GameSession, State, StateTransition, ViewData};
+use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct WelcomeState;
@@ -35,7 +35,7 @@ impl State for WelcomeState {
     }
 
     fn on_enter(&mut self, _session: &mut GameSession) {
-        // Nothing to do on enter
+        // Welcome content is now initialized in Application
     }
 
     fn on_exit(&mut self, _session: &mut GameSession) {
@@ -66,7 +66,7 @@ impl State for WelcomeState {
         }
     }
 
-    fn name(&self) -> &'static str {
-        "WelcomeState"
+    fn state_type(&self) -> StateType {
+        StateType::Welcome
     }
 }

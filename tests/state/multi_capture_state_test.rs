@@ -22,12 +22,6 @@ fn test_multi_capture_state_keeps_piece_selected() {
 }
 
 #[test]
-fn test_multi_capture_state_name() {
-    let state = MultiCaptureState::new((4, 3));
-    assert_eq!(state.name(), "MultiCaptureState");
-}
-
-#[test]
 fn test_multi_capture_state_forces_capture_moves_only() {
     let mut session = GameSession::new();
 

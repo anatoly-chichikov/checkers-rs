@@ -1,4 +1,4 @@
-use crate::state::{GameSession, State, StateTransition, ViewData};
+use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct PieceSelectedState {
@@ -103,7 +103,7 @@ impl State for PieceSelectedState {
         }
     }
 
-    fn name(&self) -> &'static str {
-        "PieceSelectedState"
+    fn state_type(&self) -> StateType {
+        StateType::PieceSelected
     }
 }

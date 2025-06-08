@@ -1,6 +1,6 @@
 use crate::ai::genai_client::get_ai_move;
 use crate::core::piece::Color;
-use crate::state::{GameSession, State, StateTransition, ViewData};
+use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::KeyEvent;
 
 #[derive(Default)]
@@ -189,7 +189,7 @@ impl State for AITurnState {
         }
     }
 
-    fn name(&self) -> &'static str {
-        "AITurnState"
+    fn state_type(&self) -> StateType {
+        StateType::AITurn
     }
 }

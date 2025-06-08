@@ -1,4 +1,4 @@
-use crate::state::{GameSession, State, StateTransition, ViewData};
+use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct MultiCaptureState {
@@ -93,7 +93,7 @@ impl State for MultiCaptureState {
         }
     }
 
-    fn name(&self) -> &'static str {
-        "MultiCaptureState"
+    fn state_type(&self) -> StateType {
+        StateType::MultiCapture
     }
 }

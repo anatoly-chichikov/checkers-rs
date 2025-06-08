@@ -1,5 +1,5 @@
 use crate::core::piece::Color;
-use crate::state::{GameSession, State, StateTransition, ViewData};
+use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct GameOverState {
@@ -52,7 +52,7 @@ impl State for GameOverState {
         }
     }
 
-    fn name(&self) -> &'static str {
-        "GameOverState"
+    fn state_type(&self) -> StateType {
+        StateType::GameOver
     }
 }

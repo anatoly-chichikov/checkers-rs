@@ -1,5 +1,8 @@
 # Terminal Checkers in Rust
 
+> This is a vibe-coding experiment. 
+> How ready are modern dev-agents for handling an unpopular language and a relatively complex task?
+
 A terminal-based Checkers game built with Rust.
 
 **Features:**
@@ -51,7 +54,7 @@ A terminal-based Checkers game built with Rust.
 To enable AI opponent and hints, create a `.env` file:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=your_preferred_gemini_model
+GEMINI_MODEL=gemini-2.0-flash-lite  # Recommended model
 ```
 *Without an API key, the game runs in two-player mode without AI features*
 

@@ -181,12 +181,6 @@ fn test_piece_selected_state_view_data() {
 }
 
 #[test]
-fn test_piece_selected_state_name() {
-    let state = PieceSelectedState::new((2, 1));
-    assert_eq!(state.name(), "PieceSelectedState");
-}
-
-#[test]
 fn test_piece_selected_state_transitions_to_multi_capture() {
     let mut session = GameSession::new();
 

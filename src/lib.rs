@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod application;
 pub mod core;
 pub mod interface;
 pub mod state;

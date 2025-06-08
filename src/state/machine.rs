@@ -1,6 +1,7 @@
 use crate::state::game_session::GameSession;
 use crate::state::transition::StateTransition;
 use crate::state::view_data::ViewData;
+use crate::state::StateType;
 use crossterm::event::KeyEvent;
 
 pub trait State {
@@ -12,7 +13,7 @@ pub trait State {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a>;
 
-    fn name(&self) -> &'static str;
+    fn state_type(&self) -> StateType;
 }
 
 pub struct StateMachine {
@@ -35,8 +36,8 @@ impl StateMachine {
         self.current_state.get_view_data(session)
     }
 
-    pub fn current_state_name(&self) -> &'static str {
-        self.current_state.name()
+    pub fn current_state_type(&self) -> StateType {
+        self.current_state.state_type()
     }
 
     fn process_transition(&mut self, session: &mut GameSession, transition: StateTransition) {

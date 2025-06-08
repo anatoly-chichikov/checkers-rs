@@ -11,3 +11,13 @@ pub use game_session::GameSession;
 pub use machine::{State, StateMachine};
 pub use transition::StateTransition;
 pub use view_data::ViewData;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateType {
+    Welcome,
+    Playing,
+    PieceSelected,
+    AITurn,
+    MultiCapture,
+    GameOver,
+}

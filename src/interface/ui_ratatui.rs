@@ -295,18 +295,18 @@ impl UI {
 
             // Calculate inner area
             let inner = block.inner(area);
-            
+
             // Create vertical layout for centering
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1),  // Top padding
-                    Constraint::Length(1),  // "Game Over"
-                    Constraint::Length(1),  // Space
-                    Constraint::Length(1),  // Winner message
-                    Constraint::Length(1),  // Space
-                    Constraint::Length(1),  // "Press ESC to exit..."
-                    Constraint::Min(0),     // Bottom padding
+                    Constraint::Length(1), // Top padding
+                    Constraint::Length(1), // "Game Over"
+                    Constraint::Length(1), // Space
+                    Constraint::Length(1), // Winner message
+                    Constraint::Length(1), // Space
+                    Constraint::Length(1), // "Press ESC to exit..."
+                    Constraint::Min(0),    // Bottom padding
                 ])
                 .split(inner);
 
