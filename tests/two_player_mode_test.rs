@@ -1,5 +1,5 @@
-use checkers_rs::state::GameSession;
 use checkers_rs::core::piece::Color as PieceColor;
+use checkers_rs::state::GameSession;
 
 #[test]
 fn test_two_player_mode_alternates_turns() {
@@ -69,8 +69,8 @@ fn test_both_players_can_capture() {
 
     // Black's turn - if there's a forced capture, take it
     // Otherwise setup for another capture scenario
-    let black_has_capture =
-        session.game.board.get_piece(1, 2).is_some() || session.game.board.get_piece(1, 4).is_some();
+    let black_has_capture = session.game.board.get_piece(1, 2).is_some()
+        || session.game.board.get_piece(1, 4).is_some();
 
     if black_has_capture {
         // If Black has a forced capture from the previous White capture, handle it

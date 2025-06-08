@@ -115,8 +115,16 @@ impl<'a> Widget for CheckerBoard<'a> {
 
         if area.width < grid_width || area.height < grid_height {
             // Debug: draw error message instead of nothing
-            let msg = format!("Need {}x{}, got {}x{}", grid_width, grid_height, area.width, area.height);
-            buf.set_string(area.x, area.y, &msg, Style::default().fg(ratatui::style::Color::Red));
+            let msg = format!(
+                "Need {}x{}, got {}x{}",
+                grid_width, grid_height, area.width, area.height
+            );
+            buf.set_string(
+                area.x,
+                area.y,
+                &msg,
+                Style::default().fg(ratatui::style::Color::Red),
+            );
             return;
         }
 

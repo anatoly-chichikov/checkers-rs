@@ -4,13 +4,15 @@ mod interface;
 mod state;
 mod utils;
 
-
 use std::env;
 
-use crate::ai::{explain_rules, AIError, hint::HintProvider};
+use crate::ai::{explain_rules, hint::HintProvider, AIError};
 use crate::core::piece::Color;
 use crate::interface::ui_ratatui::{Input, UI};
-use crate::state::{GameSession, StateMachine, states::{WelcomeState, WelcomeContent}};
+use crate::state::{
+    states::{WelcomeContent, WelcomeState},
+    GameSession, StateMachine,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 
 async fn get_welcome_content() -> (String, String, String) {
@@ -77,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tip_of_the_day: tip_of_the_day.clone(),
         todays_challenge: todays_challenge.clone(),
     });
-    
+
     // Initialize hint provider if API key is available
     if let Ok(api_key) = env::var("GEMINI_API_KEY") {
         if env::var("GEMINI_MODEL").is_ok() {
@@ -86,25 +88,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     let mut state_machine = StateMachine::new(Box::new(WelcomeState::new()));
-    
+
     // Main state machine loop
     loop {
         let view = state_machine.get_view_data(&session);
         ui.draw_view_data(&view)?;
-        
+
         // Add small delay to see welcome screen
         if state_machine.current_state_name() == "WelcomeState" {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        
+
         // Check if current state is AITurnState or if we need to transition to AI turn
         let current_state = state_machine.current_state_name();
         let is_ai_turn = current_state == "AITurnState";
-        let should_check_ai_transition = current_state == "PlayingState" && session.game.current_player == Color::Black;
-        
-        
+        let should_check_ai_transition =
+            current_state == "PlayingState" && session.game.current_player == Color::Black;
+
         if is_ai_turn || should_check_ai_transition {
             // For AI turn or potential AI turn, use non-blocking input and always trigger handle_input
             if let Ok(Some(input)) = ui.poll_input() {
@@ -112,11 +114,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     break;
                 }
             }
-            // Always call handle_input to let state machine progress (only for AI)
-            if is_ai_turn {
+            // Always call handle_input to let state machine progress (for AI turn or transition)
+            if is_ai_turn || should_check_ai_transition {
                 state_machine.handle_input(&mut session, KeyEvent::from(KeyCode::Char(' ')));
             }
-            
+
             // Small delay to prevent busy loop
             std::thread::sleep(std::time::Duration::from_millis(50));
         } else {
@@ -131,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Input::Quit => KeyEvent::from(KeyCode::Esc),
                 };
                 state_machine.handle_input(&mut session, key_event);
-                
+
                 // Check if we should exit
                 if matches!(input, Input::Quit) {
                     break;
@@ -139,7 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     ui.restore()?;
     Ok(())
 }

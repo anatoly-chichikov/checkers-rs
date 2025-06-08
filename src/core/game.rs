@@ -63,8 +63,13 @@ impl CheckersGame {
         }
     }
 
-    pub fn make_move(&mut self, from_row: usize, from_col: usize, to_row: usize, to_col: usize) -> Result<bool, GameError> {
-
+    pub fn make_move(
+        &mut self,
+        from_row: usize,
+        from_col: usize,
+        to_row: usize,
+        to_col: usize,
+    ) -> Result<bool, GameError> {
         if !self.board.in_bounds(to_row, to_col) {
             return Err(GameError::OutOfBounds);
         }
@@ -115,12 +120,13 @@ impl CheckersGame {
             became_king,
         );
 
-        let continue_capture = row_diff_abs == 2 && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col);
-        
+        let continue_capture = row_diff_abs == 2
+            && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col);
+
         if !continue_capture {
             self.switch_player();
         }
-        
+
         Ok(continue_capture)
     }
 

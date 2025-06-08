@@ -1,7 +1,5 @@
 use checkers_rs::ai::hint::HintProvider;
-use checkers_rs::core::{
-    game_logic::get_all_valid_moves_for_player, piece::Color as PieceColor,
-};
+use checkers_rs::core::{game_logic::get_all_valid_moves_for_player, piece::Color as PieceColor};
 use checkers_rs::state::GameSession;
 use serial_test::serial;
 use std::env;
@@ -49,7 +47,11 @@ async fn test_hint_updates_after_ai_move() {
 
         // Get a hint for the current board state (after simulated AI move)
         match hint_provider
-            .get_hint(&session.game.board, PieceColor::White, &session.game.move_history)
+            .get_hint(
+                &session.game.board,
+                PieceColor::White,
+                &session.game.move_history,
+            )
             .await
         {
             Ok(hint_text) => {
@@ -89,7 +91,11 @@ async fn test_hint_content_changes_with_board_state() {
 
     // Get hint for initial board
     let hint1 = hint_provider
-        .get_hint(&session.game.board, PieceColor::White, &session.game.move_history)
+        .get_hint(
+            &session.game.board,
+            PieceColor::White,
+            &session.game.move_history,
+        )
         .await;
 
     // Make a move
@@ -102,7 +108,11 @@ async fn test_hint_content_changes_with_board_state() {
 
     // Get hint for new board state
     let hint2 = hint_provider
-        .get_hint(&session.game.board, PieceColor::White, &session.game.move_history)
+        .get_hint(
+            &session.game.board,
+            PieceColor::White,
+            &session.game.move_history,
+        )
         .await;
 
     // If both hints succeeded, they should be different
@@ -128,7 +138,11 @@ async fn test_hint_provider_handles_api_failures_gracefully() {
 
     // This should fail gracefully
     match hint_provider
-        .get_hint(&session.game.board, PieceColor::White, &session.game.move_history)
+        .get_hint(
+            &session.game.board,
+            PieceColor::White,
+            &session.game.move_history,
+        )
         .await
     {
         Ok(_) => {

@@ -30,9 +30,18 @@ fn test_deselection_blocked_during_multi_capture() {
 
     // Set up a multi-capture scenario
     // White piece at (5, 2) can capture black at (4, 3) and then at (2, 5)
-    session.game.board.set_piece(5, 2, Some(Piece::new(Color::White)));
-    session.game.board.set_piece(4, 3, Some(Piece::new(Color::Black)));
-    session.game.board.set_piece(2, 5, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(5, 2, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(4, 3, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(2, 5, Some(Piece::new(Color::Black)));
 
     // Select the white piece
     session.select_piece(5, 2).unwrap();
@@ -68,9 +77,18 @@ fn test_is_in_multi_capture_returns_true_when_only_captures_available() {
     session.game.board = Board::new(8);
 
     // Set up where piece has ONLY capture moves
-    session.game.board.set_piece(4, 2, Some(Piece::new(Color::White)));
-    session.game.board.set_piece(3, 3, Some(Piece::new(Color::Black)));
-    session.game.board.set_piece(3, 1, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(4, 2, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(3, 3, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(3, 1, Some(Piece::new(Color::Black)));
 
     session.game.current_player = Color::White;
     session.select_piece(4, 2).unwrap();
@@ -95,7 +113,10 @@ fn test_deselection_with_mixed_moves_not_multi_capture() {
     session.game.board = Board::new(8);
 
     // Regular piece with normal move available
-    session.game.board.set_piece(5, 2, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(5, 2, Some(Piece::new(Color::White)));
 
     // Ensure there are no captures available from this position
     session.game.current_player = Color::White;
@@ -124,11 +145,20 @@ fn test_forced_capture_prevents_selecting_non_capturing_piece() {
     session.game.board = Board::new(8);
 
     // White piece that can capture
-    session.game.board.set_piece(4, 2, Some(Piece::new(Color::White)));
-    session.game.board.set_piece(3, 3, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(4, 2, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(3, 3, Some(Piece::new(Color::Black)));
 
     // White piece that cannot capture
-    session.game.board.set_piece(5, 0, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(5, 0, Some(Piece::new(Color::White)));
 
     session.game.current_player = Color::White;
 
@@ -169,9 +199,18 @@ fn test_multi_capture_sequence_maintains_selection() {
     // Set up a double capture for white
     // White at (5, 2) can capture black at (4, 3) landing at (3, 4)
     // Then from (3, 4) can capture black at (2, 5) landing at (1, 6)
-    session.game.board.set_piece(5, 2, Some(Piece::new(Color::White)));
-    session.game.board.set_piece(4, 3, Some(Piece::new(Color::Black)));
-    session.game.board.set_piece(2, 5, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(5, 2, Some(Piece::new(Color::White)));
+    session
+        .game
+        .board
+        .set_piece(4, 3, Some(Piece::new(Color::Black)));
+    session
+        .game
+        .board
+        .set_piece(2, 5, Some(Piece::new(Color::Black)));
 
     session.game.current_player = Color::White;
 

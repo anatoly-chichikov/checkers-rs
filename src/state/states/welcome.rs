@@ -27,15 +27,15 @@ impl State for WelcomeState {
             _ => StateTransition::None,
         }
     }
-    
+
     fn on_enter(&mut self, _session: &mut GameSession) {
         // Nothing to do on enter
     }
-    
+
     fn on_exit(&mut self, _session: &mut GameSession) {
         // Nothing to do on exit
     }
-    
+
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
             board: &session.game.board,
@@ -49,14 +49,16 @@ impl State for WelcomeState {
             last_move: None,
             hint: None,
             is_game_over: false,
-            welcome_content: session.welcome_content.as_ref().map(|content| (
-                content.did_you_know.as_str(),
-                content.tip_of_the_day.as_str(),
-                content.todays_challenge.as_str(),
-            )),
+            welcome_content: session.welcome_content.as_ref().map(|content| {
+                (
+                    content.did_you_know.as_str(),
+                    content.tip_of_the_day.as_str(),
+                    content.todays_challenge.as_str(),
+                )
+            }),
         }
     }
-    
+
     fn name(&self) -> &'static str {
         "WelcomeState"
     }

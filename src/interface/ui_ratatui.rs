@@ -38,9 +38,7 @@ impl UI {
         let backend = CrosstermBackend::new(io::stdout());
         let terminal = Terminal::new(backend)?;
 
-        Ok(Self {
-            terminal,
-        })
+        Ok(Self { terminal })
     }
 
     pub fn init(&mut self) -> io::Result<()> {
@@ -64,7 +62,7 @@ impl UI {
         self.terminal.show_cursor()?;
         Ok(())
     }
-    
+
     #[allow(dead_code)]
     pub fn clear(&mut self) -> io::Result<()> {
         self.terminal.clear()?;
@@ -78,7 +76,6 @@ impl UI {
         todays_challenge: &str,
     ) -> io::Result<()> {
         self.terminal.draw(|f| {
-            
             let welcome = WelcomeScreen::new(
                 did_you_know.to_string(),
                 tip_of_the_day.to_string(),
@@ -173,7 +170,7 @@ impl UI {
         if let Some((did_you_know, tip, challenge)) = view.welcome_content {
             return self.draw_welcome_screen(did_you_know, tip, challenge);
         }
-        
+
         // Check if it's game over
         if view.is_game_over {
             let winner = if view.status_message.contains("Black wins") {
@@ -185,9 +182,8 @@ impl UI {
             };
             return self.draw_game_over(winner);
         }
-        
+
         self.terminal.draw(|f| {
-            
             // First, create a centered column of fixed width
             let main_width = 64;
             let centered_area = if f.area().width >= main_width {
@@ -205,12 +201,12 @@ impl UI {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1),  // Top separator
-                    Constraint::Length(2),  // Game status
-                    Constraint::Min(18),     // Board - use Min to ensure at least 18
-                    Constraint::Length(1),  // Bottom separator
-                    Constraint::Length(1),  // Controls
-                    Constraint::Max(6),     // Hint area - use Max to limit if needed
+                    Constraint::Length(1), // Top separator
+                    Constraint::Length(2), // Game status
+                    Constraint::Min(18),   // Board - use Min to ensure at least 18
+                    Constraint::Length(1), // Bottom separator
+                    Constraint::Length(1), // Controls
+                    Constraint::Max(6),    // Hint area - use Max to limit if needed
                 ])
                 .split(centered_area);
 
@@ -240,7 +236,7 @@ impl UI {
             f.render_widget(bottom_sep_widget, chunks[3]);
 
             // Controls
-            let controls = vec!["↑↓←→ Move", "Space/Enter Select", "ESC/Q Quit"];
+            let controls = ["↑↓←→ Move", "Space/Enter Select", "ESC/Q Quit"];
             let controls_text = controls.join("  •  ");
             let controls_widget = Paragraph::new(controls_text)
                 .style(Style::default().fg(Theme::TEXT_PRIMARY))
@@ -326,7 +322,7 @@ impl UI {
             }
         }
     }
-    
+
     pub fn poll_input(&self) -> io::Result<Option<Input>> {
         if event::poll(std::time::Duration::from_millis(0))? {
             if let Event::Key(KeyEvent { code, .. }) = event::read()? {
@@ -346,7 +342,6 @@ impl UI {
         }
         Ok(None)
     }
-
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

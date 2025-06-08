@@ -40,9 +40,13 @@ impl State for MultiCaptureState {
                                 self.capturing_piece = cursor;
                                 self.on_enter(session); // Update possible moves
                                 StateTransition::None
-                            } else if session.game.check_winner().is_some() || session.game.is_stalemate() {
+                            } else if session.game.check_winner().is_some()
+                                || session.game.is_stalemate()
+                            {
                                 session.game.is_game_over = true;
-                                StateTransition::To(Box::new(super::GameOverState::new(session.game.check_winner())))
+                                StateTransition::To(Box::new(super::GameOverState::new(
+                                    session.game.check_winner(),
+                                )))
                             } else {
                                 StateTransition::To(Box::new(super::PlayingState::new()))
                             }
@@ -56,15 +60,17 @@ impl State for MultiCaptureState {
             _ => StateTransition::None,
         }
     }
-    
+
     fn on_enter(&mut self, session: &mut GameSession) {
-        session.ui_state.select_piece(self.capturing_piece, &session.game.board);
+        session
+            .ui_state
+            .select_piece(self.capturing_piece, &session.game.board);
     }
-    
+
     fn on_exit(&mut self, session: &mut GameSession) {
         session.ui_state.clear_selection();
     }
-    
+
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
             board: &session.game.board,
@@ -81,7 +87,7 @@ impl State for MultiCaptureState {
             welcome_content: None,
         }
     }
-    
+
     fn name(&self) -> &'static str {
         "MultiCaptureState"
     }

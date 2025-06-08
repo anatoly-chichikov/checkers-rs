@@ -17,22 +17,22 @@ impl State for GameOverState {
         // Exit on any key press
         StateTransition::Exit
     }
-    
+
     fn on_enter(&mut self, _session: &mut GameSession) {
         // Nothing to do
     }
-    
+
     fn on_exit(&mut self, _session: &mut GameSession) {
         // Nothing to do
     }
-    
+
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         let message = match self.winner {
             Some(Color::White) => "Black wins!".to_string(),
             Some(Color::Black) => "White wins!".to_string(),
             None => "Stalemate! No possible moves.".to_string(),
         };
-        
+
         ViewData {
             board: &session.game.board,
             current_player: session.game.current_player,
@@ -48,7 +48,7 @@ impl State for GameOverState {
             welcome_content: None,
         }
     }
-    
+
     fn name(&self) -> &'static str {
         "GameOverState"
     }

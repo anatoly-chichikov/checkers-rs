@@ -1,6 +1,6 @@
-use crate::state::{GameSession, State, StateTransition, ViewData};
-use crate::core::piece::Color;
 use crate::ai::genai_client::get_ai_move;
+use crate::core::piece::Color;
+use crate::state::{GameSession, State, StateTransition, ViewData};
 use crossterm::event::KeyEvent;
 
 pub struct AITurnState {
@@ -20,37 +20,44 @@ impl State for AITurnState {
         // Make AI move if not done yet
         if !self.move_requested {
             self.move_requested = true;
-            
+
             // Check if we should use real AI or test fallback
-            let use_real_ai = std::env::var("AI_TEST_MODE").is_err() &&
-                               std::env::var("GEMINI_API_KEY").is_ok() && 
-                               std::env::var("GEMINI_MODEL").is_ok() &&
-                               tokio::runtime::Handle::try_current().is_ok();
-            
+            let use_real_ai = std::env::var("AI_TEST_MODE").is_err()
+                && std::env::var("GEMINI_API_KEY").is_ok()
+                && std::env::var("GEMINI_MODEL").is_ok()
+                && tokio::runtime::Handle::try_current().is_ok();
+
             if use_real_ai {
                 // Use real AI with async calls
                 let ai_result = tokio::task::block_in_place(|| {
                     tokio::runtime::Handle::current().block_on(get_ai_move(&session.game))
                 });
-                
+
                 match ai_result {
                     Ok(((from_row, from_col), (to_row, to_col))) => {
                         match session.game.make_move(from_row, from_col, to_row, to_col) {
                             Ok(_) => {
                                 session.ai_state.clear_error();
-                                
+
                                 // Update hint after AI move
                                 if let Some(ref provider) = session.hint_provider {
-                                    if session.game.current_player == Color::White && !session.game.is_game_over {
+                                    if session.game.current_player == Color::White
+                                        && !session.game.is_game_over
+                                    {
                                         let hint_result = tokio::task::block_in_place(|| {
                                             tokio::runtime::Handle::current().block_on(
-                                                provider.get_hint(&session.game.board, Color::White, &session.game.move_history)
+                                                provider.get_hint(
+                                                    &session.game.board,
+                                                    Color::White,
+                                                    &session.game.move_history,
+                                                ),
                                             )
                                         });
-                                        
+
                                         match hint_result {
                                             Ok(hint_text) => {
-                                                session.hint = Some(crate::ai::Hint { hint: hint_text });
+                                                session.hint =
+                                                    Some(crate::ai::Hint { hint: hint_text });
                                             }
                                             Err(_) => {
                                                 session.hint = None;
@@ -58,20 +65,24 @@ impl State for AITurnState {
                                         }
                                     }
                                 }
-                                
+
                                 // Check for game over
-                                if session.game.check_winner().is_some() || session.game.is_stalemate() {
+                                if session.game.check_winner().is_some()
+                                    || session.game.is_stalemate()
+                                {
                                     session.game.is_game_over = true;
                                     return StateTransition::To(Box::new(
-                                        super::GameOverState::new(session.game.check_winner())
+                                        super::GameOverState::new(session.game.check_winner()),
                                     ));
                                 }
-                                
+
                                 // Transition back to playing state
                                 return StateTransition::To(Box::new(super::PlayingState::new()));
                             }
                             Err(e) => {
-                                session.ai_state.set_error(format!("AI failed to move: {}", e));
+                                session
+                                    .ai_state
+                                    .set_error(format!("AI failed to move: {}", e));
                                 session.game.switch_player();
                                 return StateTransition::To(Box::new(super::PlayingState::new()));
                             }
@@ -86,45 +97,48 @@ impl State for AITurnState {
             } else {
                 // Fallback to simple AI for tests
                 use crate::core::game_logic;
-                
-                let all_moves = game_logic::get_all_valid_moves_for_player(&session.game.board, Color::Black);
-                
+
+                let all_moves =
+                    game_logic::get_all_valid_moves_for_player(&session.game.board, Color::Black);
+
                 if all_moves.is_empty() {
                     // No valid moves - game over
                     session.game.is_game_over = true;
-                    return StateTransition::To(Box::new(
-                        super::GameOverState::new(Some(Color::White))
-                    ));
+                    return StateTransition::To(Box::new(super::GameOverState::new(Some(
+                        Color::White,
+                    ))));
                 }
-                
+
                 // Separate captures from regular moves
-                let captures: Vec<_> = all_moves.iter()
+                let captures: Vec<_> = all_moves
+                    .iter()
                     .filter(|(_, _, is_capture)| *is_capture)
                     .cloned()
                     .collect();
-                
+
                 let moves_to_consider = if !captures.is_empty() {
                     captures // Must make a capture if available
                 } else {
                     all_moves
                 };
-                
+
                 if !moves_to_consider.is_empty() {
                     // Pick first available move (simple AI)
                     let ((from_row, from_col), (to_row, to_col), _) = moves_to_consider[0];
-                    
+
                     match session.game.make_move(from_row, from_col, to_row, to_col) {
                         Ok(_) => {
                             session.ai_state.clear_error();
-                            
+
                             // Check for game over
-                            if session.game.check_winner().is_some() || session.game.is_stalemate() {
+                            if session.game.check_winner().is_some() || session.game.is_stalemate()
+                            {
                                 session.game.is_game_over = true;
-                                return StateTransition::To(Box::new(
-                                    super::GameOverState::new(session.game.check_winner())
-                                ));
+                                return StateTransition::To(Box::new(super::GameOverState::new(
+                                    session.game.check_winner(),
+                                )));
                             }
-                            
+
                             return StateTransition::To(Box::new(super::PlayingState::new()));
                         }
                         Err(e) => {
@@ -135,18 +149,18 @@ impl State for AITurnState {
                 }
             }
         }
-        
+
         StateTransition::None
     }
-    
+
     fn on_enter(&mut self, session: &mut GameSession) {
         session.ai_state.start_thinking();
     }
-    
+
     fn on_exit(&mut self, session: &mut GameSession) {
         session.ai_state.stop_thinking();
     }
-    
+
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
             board: &session.game.board,
@@ -163,7 +177,7 @@ impl State for AITurnState {
             welcome_content: None,
         }
     }
-    
+
     fn name(&self) -> &'static str {
         "AITurnState"
     }

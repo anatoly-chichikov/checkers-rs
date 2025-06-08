@@ -11,7 +11,6 @@ use genai::{
 };
 use std::env;
 
-
 #[allow(dead_code)]
 pub struct HintProvider {
     api_key: String,

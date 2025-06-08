@@ -1,5 +1,5 @@
-use crate::core::game_logic::get_all_possible_moves;
 use crate::core::board::Board;
+use crate::core::game_logic::get_all_possible_moves;
 
 #[derive(Clone)]
 pub struct UIState {

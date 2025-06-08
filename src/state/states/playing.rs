@@ -16,7 +16,7 @@ impl State for PlayingState {
         if session.game.current_player == Color::Black {
             return StateTransition::To(Box::new(super::AITurnState::new()));
         }
-        
+
         match key.code {
             KeyCode::Up => {
                 session.ui_state.move_cursor_up();
@@ -38,9 +38,9 @@ impl State for PlayingState {
                 let cursor_pos = session.ui_state.cursor_pos;
                 if let Some(piece) = session.game.board.get_piece(cursor_pos.0, cursor_pos.1) {
                     if piece.color == session.game.current_player {
-                        return StateTransition::To(Box::new(
-                            super::PieceSelectedState::new(cursor_pos)
-                        ));
+                        return StateTransition::To(Box::new(super::PieceSelectedState::new(
+                            cursor_pos,
+                        )));
                     }
                 }
                 StateTransition::None
@@ -49,15 +49,15 @@ impl State for PlayingState {
             _ => StateTransition::None,
         }
     }
-    
+
     fn on_enter(&mut self, _session: &mut GameSession) {
         // Nothing to do
     }
-    
+
     fn on_exit(&mut self, _session: &mut GameSession) {
         // Nothing to do
     }
-    
+
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
             board: &session.game.board,
@@ -65,8 +65,14 @@ impl State for PlayingState {
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: session.ui_state.selected_piece,
             possible_moves: &session.ui_state.possible_moves,
-            status_message: format!("{}'s turn", 
-                if session.game.current_player == Color::White { "White" } else { "Black" }),
+            status_message: format!(
+                "{}'s turn",
+                if session.game.current_player == Color::White {
+                    "White"
+                } else {
+                    "Black"
+                }
+            ),
             show_ai_thinking: false,
             error_message: None,
             last_move: session.game.move_history.get_last_move(),
@@ -75,7 +81,7 @@ impl State for PlayingState {
             welcome_content: None,
         }
     }
-    
+
     fn name(&self) -> &'static str {
         "PlayingState"
     }

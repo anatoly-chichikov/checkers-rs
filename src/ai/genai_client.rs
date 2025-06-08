@@ -13,8 +13,6 @@ use crate::core::piece::Color as PieceColor;
 use crate::interface::messages;
 use crate::utils::prompts::get_ai_move_prompt;
 
-
-
 pub async fn explain_rules() -> Result<String, AIError> {
     dotenv::dotenv().ok();
 
