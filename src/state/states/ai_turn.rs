@@ -54,8 +54,8 @@ impl State for AITurnState {
 
                                 // Update hint after AI move
                                 if let Some(ref provider) = new_session.hint_provider {
-                                    if session.game.current_player == Color::White
-                                        && !session.game.is_game_over
+                                    if new_session.game.current_player == Color::White
+                                        && !new_session.game.is_game_over
                                     {
                                         let hint_result = tokio::task::block_in_place(|| {
                                             tokio::runtime::Handle::current().block_on(
