@@ -53,7 +53,9 @@ impl State for PlayingState {
                             .is_ok()
                     {
                         // Select the piece before transitioning
-                        if let Ok(session_with_selection) = session.select_piece(cursor_pos.0, cursor_pos.1) {
+                        if let Ok(session_with_selection) =
+                            session.select_piece(cursor_pos.0, cursor_pos.1)
+                        {
                             return (
                                 session_with_selection,
                                 StateTransition::To(Box::new(super::PieceSelectedState::new(

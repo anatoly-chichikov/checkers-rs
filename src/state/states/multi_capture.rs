@@ -16,39 +16,23 @@ impl State for MultiCaptureState {
         match key.code {
             KeyCode::Up => {
                 let new_ui = session.ui_state.move_cursor_up();
-                (
-                    session.with_ui_state(new_ui),
-                    StateTransition::None,
-                )
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Down => {
                 let new_ui = session.ui_state.move_cursor_down(7);
-                (
-                    session.with_ui_state(new_ui),
-                    StateTransition::None,
-                )
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Left => {
                 let new_ui = session.ui_state.move_cursor_left();
-                (
-                    session.with_ui_state(new_ui),
-                    StateTransition::None,
-                )
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Right => {
                 let new_ui = session.ui_state.move_cursor_right(7);
-                (
-                    session.with_ui_state(new_ui),
-                    StateTransition::None,
-                )
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor = session.ui_state.cursor_pos;
-                if session
-                    .ui_state
-                    .possible_moves
-                    .contains(&cursor)
-                {
+                if session.ui_state.possible_moves.contains(&cursor) {
                     match session.try_multicapture_move(cursor.0, cursor.1) {
                         Ok((updated_session, continue_capture, _positions)) => {
                             // Check if capture continues

@@ -12,13 +12,14 @@ fn test_welcome_state_transitions_to_playing_on_enter() {
         todays_challenge: "Test challenge".to_string(),
     };
 
-    let mut session = GameSession::new();
-    session.welcome_content = Some(content);
+    let mut initial_session = GameSession::new();
+    initial_session.welcome_content = Some(content.clone());
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test Enter key transitions to PlayingState
-    let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Enter));
+    let (new_session, transition) =
+        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
 
     match transition {
         StateTransition::To(next_state) => {
@@ -29,6 +30,20 @@ fn test_welcome_state_transitions_to_playing_on_enter() {
         }
         _ => panic!("Expected transition to PlayingState"),
     }
+
+    // Verify initial session unchanged
+    assert_eq!(
+        initial_session
+            .welcome_content
+            .as_ref()
+            .unwrap()
+            .did_you_know,
+        "Test fact"
+    );
+    assert_eq!(
+        new_session.game.board.cells,
+        initial_session.game.board.cells
+    );
 }
 
 #[test]
@@ -39,13 +54,13 @@ fn test_welcome_state_exits_on_esc() {
         todays_challenge: "Test challenge".to_string(),
     };
 
-    let mut session = GameSession::new();
-    session.welcome_content = Some(content);
+    let mut initial_session = GameSession::new();
+    initial_session.welcome_content = Some(content);
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test ESC key exits
-    let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Esc));
+    let (_, transition) = state.handle_input(&initial_session, KeyEvent::from(KeyCode::Esc));
 
     match transition {
         StateTransition::Exit => {
@@ -63,13 +78,13 @@ fn test_welcome_state_exits_on_q() {
         todays_challenge: "Test challenge".to_string(),
     };
 
-    let mut session = GameSession::new();
-    session.welcome_content = Some(content);
+    let mut initial_session = GameSession::new();
+    initial_session.welcome_content = Some(content);
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test 'q' key exits
-    let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Char('q')));
+    let (_, transition) = state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char('q')));
 
     match transition {
         StateTransition::Exit => {
@@ -87,10 +102,10 @@ fn test_welcome_state_ignores_other_keys() {
         todays_challenge: "Test challenge".to_string(),
     };
 
-    let mut session = GameSession::new();
-    session.welcome_content = Some(content);
+    let mut initial_session = GameSession::new();
+    initial_session.welcome_content = Some(content);
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test other keys do nothing
     let keys = vec![
@@ -103,10 +118,14 @@ fn test_welcome_state_ignores_other_keys() {
     ];
 
     for key in keys {
-        let transition = state.handle_input(&mut session, KeyEvent::from(key));
+        let (new_session, transition) = state.handle_input(&initial_session, KeyEvent::from(key));
         match transition {
             StateTransition::None => {
-                // Success
+                // Success - verify session unchanged
+                assert_eq!(
+                    new_session.game.board.cells,
+                    initial_session.game.board.cells
+                );
             }
             _ => panic!("Expected None transition for key: {:?}", key),
         }
@@ -121,11 +140,11 @@ fn test_welcome_state_view_data() {
         todays_challenge: "Test challenge".to_string(),
     };
 
-    let mut session = GameSession::new();
-    session.welcome_content = Some(content);
+    let mut initial_session = GameSession::new();
+    initial_session.welcome_content = Some(content);
 
     let state = WelcomeState::new();
-    let view = state.get_view_data(&session);
+    let view = state.get_view_data(&initial_session);
 
     // Check that welcome content is set
     assert!(view.welcome_content.is_some());
