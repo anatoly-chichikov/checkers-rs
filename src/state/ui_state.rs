@@ -17,38 +17,50 @@ impl UIState {
         }
     }
 
-    pub fn move_cursor_up(&mut self) {
-        if self.cursor_pos.0 > 0 {
-            self.cursor_pos.0 -= 1;
+    pub fn move_cursor_up(&self) -> Self {
+        let mut new_state = self.clone();
+        if new_state.cursor_pos.0 > 0 {
+            new_state.cursor_pos.0 -= 1;
         }
+        new_state
     }
 
-    pub fn move_cursor_down(&mut self, max_row: usize) {
-        if self.cursor_pos.0 < max_row {
-            self.cursor_pos.0 += 1;
+    pub fn move_cursor_down(&self, max_row: usize) -> Self {
+        let mut new_state = self.clone();
+        if new_state.cursor_pos.0 < max_row {
+            new_state.cursor_pos.0 += 1;
         }
+        new_state
     }
 
-    pub fn move_cursor_left(&mut self) {
-        if self.cursor_pos.1 > 0 {
-            self.cursor_pos.1 -= 1;
+    pub fn move_cursor_left(&self) -> Self {
+        let mut new_state = self.clone();
+        if new_state.cursor_pos.1 > 0 {
+            new_state.cursor_pos.1 -= 1;
         }
+        new_state
     }
 
-    pub fn move_cursor_right(&mut self, max_col: usize) {
-        if self.cursor_pos.1 < max_col {
-            self.cursor_pos.1 += 1;
+    pub fn move_cursor_right(&self, max_col: usize) -> Self {
+        let mut new_state = self.clone();
+        if new_state.cursor_pos.1 < max_col {
+            new_state.cursor_pos.1 += 1;
         }
+        new_state
     }
 
-    pub fn clear_selection(&mut self) {
-        self.selected_piece = None;
-        self.possible_moves.clear();
+    pub fn clear_selection(&self) -> Self {
+        let mut new_state = self.clone();
+        new_state.selected_piece = None;
+        new_state.possible_moves.clear();
+        new_state
     }
 
-    pub fn select_piece(&mut self, pos: (usize, usize), board: &Board) {
-        self.selected_piece = Some(pos);
-        self.possible_moves = get_all_possible_moves(board, pos.0, pos.1);
+    pub fn select_piece(&self, pos: (usize, usize), board: &Board) -> Self {
+        let mut new_state = self.clone();
+        new_state.selected_piece = Some(pos);
+        new_state.possible_moves = get_all_possible_moves(board, pos.0, pos.1);
+        new_state
     }
 }
 

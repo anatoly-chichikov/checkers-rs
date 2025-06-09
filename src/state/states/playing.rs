@@ -17,28 +17,31 @@ impl PlayingState {
 }
 
 impl State for PlayingState {
-    fn handle_input(&mut self, session: &mut GameSession, key: KeyEvent) -> StateTransition {
+    fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
         // Check if it's AI's turn
         if session.game.current_player == Color::Black {
-            return StateTransition::To(Box::new(super::AITurnState::new()));
+            return (
+                session.clone(),
+                StateTransition::To(Box::new(super::AITurnState::new())),
+            );
         }
 
-        match key.code {
+        let (new_session, transition) = match key.code {
             KeyCode::Up => {
-                session.ui_state.move_cursor_up();
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_up();
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Down => {
-                session.ui_state.move_cursor_down(7);
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_down(7);
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Left => {
-                session.ui_state.move_cursor_left();
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_left();
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Right => {
-                session.ui_state.move_cursor_right(7);
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_right(7);
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor_pos = session.ui_state.cursor_pos;
@@ -49,24 +52,21 @@ impl State for PlayingState {
                             .validate_piece_selection(cursor_pos.0, cursor_pos.1)
                             .is_ok()
                     {
-                        return StateTransition::To(Box::new(super::PieceSelectedState::new(
-                            cursor_pos,
-                        )));
+                        return (
+                            session.clone(),
+                            StateTransition::To(Box::new(super::PieceSelectedState::new(
+                                cursor_pos,
+                            ))),
+                        );
                     }
                 }
-                StateTransition::None
+                (session.clone(), StateTransition::None)
             }
-            KeyCode::Esc | KeyCode::Char('q') => StateTransition::Exit,
-            _ => StateTransition::None,
-        }
-    }
+            KeyCode::Esc | KeyCode::Char('q') => (session.clone(), StateTransition::Exit),
+            _ => (session.clone(), StateTransition::None),
+        };
 
-    fn on_enter(&mut self, _session: &mut GameSession) {
-        // Nothing to do
-    }
-
-    fn on_exit(&mut self, _session: &mut GameSession) {
-        // Nothing to do
+        (new_session, transition)
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {

@@ -13,19 +13,12 @@ impl GameOverState {
 }
 
 impl State for GameOverState {
-    fn handle_input(&mut self, _session: &mut GameSession, key: KeyEvent) -> StateTransition {
-        match key.code {
+    fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
+        let transition = match key.code {
             KeyCode::Esc => StateTransition::Exit,
             _ => StateTransition::None,
-        }
-    }
-
-    fn on_enter(&mut self, _session: &mut GameSession) {
-        // Nothing to do
-    }
-
-    fn on_exit(&mut self, _session: &mut GameSession) {
-        // Nothing to do
+        };
+        (session.clone(), transition)
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {

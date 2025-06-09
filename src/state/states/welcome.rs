@@ -23,23 +23,17 @@ impl WelcomeState {
 }
 
 impl State for WelcomeState {
-    fn handle_input(&mut self, _session: &mut GameSession, key: KeyEvent) -> StateTransition {
-        match key.code {
+    fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
+        let transition = match key.code {
             KeyCode::Enter => {
                 // Transition to PlayingState
                 StateTransition::To(Box::new(super::PlayingState::new()))
             }
             KeyCode::Esc | KeyCode::Char('q') => StateTransition::Exit,
             _ => StateTransition::None,
-        }
-    }
+        };
 
-    fn on_enter(&mut self, _session: &mut GameSession) {
-        // Welcome content is now initialized in Application
-    }
-
-    fn on_exit(&mut self, _session: &mut GameSession) {
-        // Nothing to do on exit
+        (session.clone(), transition)
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {

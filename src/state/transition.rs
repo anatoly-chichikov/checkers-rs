@@ -4,7 +4,7 @@ use std::fmt;
 
 pub enum StateTransition {
     None,
-    To(Box<dyn State>),
+    To(Box<dyn State + 'static>),
     Exit,
 }
 

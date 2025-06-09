@@ -131,8 +131,11 @@ impl Application {
             }
         }
 
-        self.state_machine
-            .handle_input(&mut self.session, KeyEvent::from(KeyCode::Char(' ')));
+        let (new_session, transition) = self
+            .state_machine
+            .handle_input(&self.session, KeyEvent::from(KeyCode::Char(' ')));
+        self.session = new_session;
+        self.state_machine.process_transition(transition);
 
         std::thread::sleep(std::time::Duration::from_millis(50));
         Ok(())
@@ -142,8 +145,10 @@ impl Application {
         if let Ok(input) = self.ui.get_input() {
             let should_quit = matches!(input, Input::Quit);
             let key_event = self.input_to_key_event(input);
-            self.state_machine
-                .handle_input(&mut self.session, key_event);
+            let (new_session, transition) =
+                self.state_machine.handle_input(&self.session, key_event);
+            self.session = new_session;
+            self.state_machine.process_transition(transition);
 
             if should_quit {
                 return Ok(false);

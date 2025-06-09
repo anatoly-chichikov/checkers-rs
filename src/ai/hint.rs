@@ -11,6 +11,7 @@ use genai::{
 };
 use std::env;
 
+#[derive(Clone)]
 pub struct HintProvider {
     api_key: String,
     model: String,
