@@ -29,11 +29,14 @@ fn test_make_move_coords_returns_new_game() {
 fn test_make_move_handles_forced_capture() {
     let mut game1 = CheckersGame::new();
 
-    game1.board.cells[3][2] = Some(Piece::new(Color::Black));
-    game1.board.cells[2][3] = Some(Piece::new(Color::White));
-
-    let from = Position::new(2, 5);
-    let to = Position::new(3, 4);
+    game1.board.cells = vec![vec![None; 8]; 8];
+    
+    game1.board.cells[4][3] = Some(Piece::new(Color::White));
+    game1.board.cells[3][4] = Some(Piece::new(Color::Black));
+    game1.board.cells[2][5] = None;
+    
+    let from = Position::new(4, 3);
+    let to = Position::new(3, 2);
 
     let result = game1.make_move_coords(from.row, from.col, to.row, to.col);
 
@@ -78,6 +81,8 @@ fn test_make_move_capture_immutability() {
 
     game1.board.cells[4][1] = Some(Piece::new(Color::Black));
     game1.board.cells[3][2] = None;
+    game1.board.cells[2][3] = Some(Piece::new(Color::Black));
+    game1.board.cells[1][4] = None;
 
     let from = Position::new(5, 0);
     let to = Position::new(3, 2);
