@@ -8,10 +8,14 @@ fn test_piece_selected_state_makes_a_valid_move() {
     let mut initial_session = GameSession::new();
 
     initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[2][1] = Some(Piece::new(Color::White));
-    initial_session.ui_state.cursor_pos = (3, 2);
+    initial_session.game.board.cells[5][2] = Some(Piece::new(Color::White));
+    initial_session.game.board.cells[0][3] = Some(Piece::new(Color::Black));
+    initial_session.game.board.cells[0][5] = Some(Piece::new(Color::Black));
+    initial_session.ui_state.cursor_pos = (4, 1);
+    initial_session.ui_state.selected_piece = Some((5, 2));
+    initial_session.ui_state.possible_moves = vec![(4, 1), (4, 3)];
 
-    let state = PieceSelectedState::new((2, 1));
+    let state = PieceSelectedState::new((5, 2));
 
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
@@ -26,12 +30,12 @@ fn test_piece_selected_state_makes_a_valid_move() {
         _ => panic!("Expected transition to PlayingState"),
     }
 
-    assert!(new_session.game.board.get_piece(2, 1).is_none());
-    assert!(new_session.game.board.get_piece(3, 2).is_some());
+    assert!(new_session.game.board.get_piece(5, 2).is_none());
+    assert!(new_session.game.board.get_piece(4, 1).is_some());
     assert_eq!(new_session.game.current_player, Color::Black);
 
-    assert!(initial_session.game.board.get_piece(2, 1).is_some());
-    assert!(initial_session.game.board.get_piece(3, 2).is_none());
+    assert!(initial_session.game.board.get_piece(5, 2).is_some());
+    assert!(initial_session.game.board.get_piece(4, 1).is_none());
 }
 
 #[test]
@@ -64,13 +68,15 @@ fn test_piece_selected_state_transitions_to_multi_capture() {
     let mut initial_session = GameSession::new();
 
     initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[2][1] = Some(Piece::new(Color::White));
-    initial_session.game.board.cells[3][2] = Some(Piece::new(Color::Black));
-    initial_session.game.board.cells[3][4] = Some(Piece::new(Color::Black));
+    initial_session.game.board.cells[5][0] = Some(Piece::new(Color::White));
+    initial_session.game.board.cells[4][1] = Some(Piece::new(Color::Black));
+    initial_session.game.board.cells[2][3] = Some(Piece::new(Color::Black));
 
-    initial_session.ui_state.cursor_pos = (4, 3);
+    initial_session.ui_state.cursor_pos = (3, 2);
+    initial_session.ui_state.selected_piece = Some((5, 0));
+    initial_session.ui_state.possible_moves = vec![(3, 2)];
 
-    let state = PieceSelectedState::new((2, 1));
+    let state = PieceSelectedState::new((5, 0));
 
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
@@ -85,12 +91,12 @@ fn test_piece_selected_state_transitions_to_multi_capture() {
         _ => panic!("Expected transition to MultiCaptureState"),
     }
 
-    assert!(new_session.game.board.get_piece(4, 3).is_some());
-    assert!(new_session.game.board.get_piece(3, 2).is_none());
+    assert!(new_session.game.board.get_piece(3, 2).is_some());
+    assert!(new_session.game.board.get_piece(4, 1).is_none());
     assert!(new_session.ui_state.selected_piece.is_some());
 
-    assert!(initial_session.game.board.get_piece(2, 1).is_some());
-    assert!(initial_session.game.board.get_piece(3, 2).is_some());
+    assert!(initial_session.game.board.get_piece(5, 0).is_some());
+    assert!(initial_session.game.board.get_piece(4, 1).is_some());
 }
 
 #[test]
@@ -186,6 +192,8 @@ fn test_piece_selected_state_game_over_transition() {
     initial_session.game.board.cells[3][2] = Some(Piece::new(Color::Black));
 
     initial_session.ui_state.cursor_pos = (4, 3);
+    initial_session.ui_state.selected_piece = Some((2, 1));
+    initial_session.ui_state.possible_moves = vec![(1, 0), (1, 2), (3, 0), (3, 2), (4, 3)];
 
     let state = PieceSelectedState::new((2, 1));
 

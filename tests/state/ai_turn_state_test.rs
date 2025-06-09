@@ -124,12 +124,10 @@ async fn test_ai_turn_state_transitions_to_game_over_if_no_moves() {
 
 #[tokio::test]
 async fn test_ai_turn_state_handles_ai_error() {
-    // Force test mode
     std::env::set_var("AI_TEST_MODE", "1");
     let mut initial_session = GameSession::new();
     initial_session.game = initial_session.game.with_switched_player();
 
-    // Clear board to create a scenario where AI will make a specific move
     let mut cleared_board = initial_session.game.board.clone();
     for row in 0..8 {
         for col in 0..8 {
@@ -137,11 +135,16 @@ async fn test_ai_turn_state_handles_ai_error() {
         }
     }
 
-    // Place one black piece
     cleared_board.set_piece(
         5,
         0,
         Some(checkers_rs::core::piece::Piece::new(Color::Black)),
+    );
+    
+    cleared_board.set_piece(
+        7,
+        2,
+        Some(checkers_rs::core::piece::Piece::new(Color::White)),
     );
 
     let mut new_game = initial_session.game.clone();
@@ -150,16 +153,13 @@ async fn test_ai_turn_state_handles_ai_error() {
 
     let state = AITurnState::new();
 
-    // Sleep to pass thinking time
     std::thread::sleep(std::time::Duration::from_millis(600));
 
-    // AI should make a move
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
 
     match transition {
         StateTransition::To(next_state) => {
-            // Should transition successfully
             assert_eq!(
                 next_state.state_type(),
                 checkers_rs::state::StateType::Playing
