@@ -2,6 +2,7 @@ use crate::core::board::Board;
 use crate::core::game_logic::{self, can_piece_capture};
 use crate::core::move_history::MoveHistory;
 use crate::core::piece::Color;
+use crate::core::GameMove;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -61,7 +62,16 @@ impl CheckersGame {
         }
     }
 
-    pub fn make_move(
+    pub fn make_move(&self, game_move: GameMove) -> Result<(Self, bool), GameError> {
+        self.make_move_coords(
+            game_move.from.row,
+            game_move.from.col,
+            game_move.to.row,
+            game_move.to.col,
+        )
+    }
+
+    pub fn make_move_coords(
         &self,
         from_row: usize,
         from_col: usize,

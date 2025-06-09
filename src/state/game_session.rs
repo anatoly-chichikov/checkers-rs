@@ -40,7 +40,6 @@ impl GameSession {
         new_session
     }
 
-
     pub fn select_piece(&self, row: usize, col: usize) -> Result<Self, GameError> {
         let mut new_session = self.clone();
 
@@ -72,7 +71,7 @@ impl GameSession {
 
         let (new_game, continue_capture) = new_session
             .game
-            .make_move(from_row, from_col, to_row, to_col)?;
+            .make_move_coords(from_row, from_col, to_row, to_col)?;
         new_session.game = new_game;
 
         if continue_capture {
@@ -85,7 +84,6 @@ impl GameSession {
 
         Ok((new_session, continue_capture))
     }
-
 
     #[allow(clippy::type_complexity)]
     pub fn try_multicapture_move(
@@ -109,7 +107,7 @@ impl GameSession {
 
             // Execute each step of the multicapture
             for &next_pos in &path {
-                let (updated_game, continue_capture) = new_session.game.make_move(
+                let (updated_game, continue_capture) = new_session.game.make_move_coords(
                     current_pos.0,
                     current_pos.1,
                     next_pos.0,

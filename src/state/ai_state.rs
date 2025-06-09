@@ -19,7 +19,6 @@ impl AIState {
         new_state
     }
 
-
     pub fn set_error(&self, error: String) -> Self {
         let mut new_state = self.clone();
         new_state.last_error = Some(error);

@@ -45,11 +45,9 @@ impl State for AITurnState {
                 });
 
                 match ai_result {
-                    Ok(((from_row, from_col), (to_row, to_col))) => {
-                        match new_session
-                            .game
-                            .make_move(from_row, from_col, to_row, to_col)
-                        {
+                    Ok((from, to)) => {
+                        let game_move = crate::core::GameMove::from_tuples(from, to);
+                        match new_session.game.make_move(game_move) {
                             Ok((updated_game, _)) => {
                                 new_session.game = updated_game;
                                 new_session.ai_state = new_session.ai_state.clear_error();
@@ -170,7 +168,7 @@ impl State for AITurnState {
 
                     match new_session
                         .game
-                        .make_move(from_row, from_col, to_row, to_col)
+                        .make_move_coords(from_row, from_col, to_row, to_col)
                     {
                         Ok((updated_game, _)) => {
                             new_session.game = updated_game;
