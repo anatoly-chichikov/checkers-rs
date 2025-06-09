@@ -52,12 +52,15 @@ impl State for PlayingState {
                             .validate_piece_selection(cursor_pos.0, cursor_pos.1)
                             .is_ok()
                     {
-                        return (
-                            session.clone(),
-                            StateTransition::To(Box::new(super::PieceSelectedState::new(
-                                cursor_pos,
-                            ))),
-                        );
+                        // Select the piece before transitioning
+                        if let Ok(session_with_selection) = session.select_piece(cursor_pos.0, cursor_pos.1) {
+                            return (
+                                session_with_selection,
+                                StateTransition::To(Box::new(super::PieceSelectedState::new(
+                                    cursor_pos,
+                                ))),
+                            );
+                        }
                     }
                 }
                 (session.clone(), StateTransition::None)

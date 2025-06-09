@@ -13,50 +13,43 @@ impl MultiCaptureState {
 
 impl State for MultiCaptureState {
     fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
-        // First, select the capturing piece to ensure possible moves are calculated
-        let session_with_selection = session.with_ui_state(
-            session
-                .ui_state
-                .select_piece(self.capturing_piece, &session.game.board),
-        );
-
         match key.code {
             KeyCode::Up => {
-                let new_ui = session_with_selection.ui_state.move_cursor_up();
+                let new_ui = session.ui_state.move_cursor_up();
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Down => {
-                let new_ui = session_with_selection.ui_state.move_cursor_down(7);
+                let new_ui = session.ui_state.move_cursor_down(7);
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Left => {
-                let new_ui = session_with_selection.ui_state.move_cursor_left();
+                let new_ui = session.ui_state.move_cursor_left();
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Right => {
-                let new_ui = session_with_selection.ui_state.move_cursor_right(7);
+                let new_ui = session.ui_state.move_cursor_right(7);
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
-                let cursor = session_with_selection.ui_state.cursor_pos;
-                if session_with_selection
+                let cursor = session.ui_state.cursor_pos;
+                if session
                     .ui_state
                     .possible_moves
                     .contains(&cursor)
                 {
-                    match session_with_selection.try_multicapture_move(cursor.0, cursor.1) {
+                    match session.try_multicapture_move(cursor.0, cursor.1) {
                         Ok((updated_session, continue_capture, _positions)) => {
                             // Check if capture continues
                             if continue_capture {
@@ -90,13 +83,13 @@ impl State for MultiCaptureState {
                                 )
                             }
                         }
-                        Err(_) => (session_with_selection, StateTransition::None),
+                        Err(_) => (session.clone(), StateTransition::None),
                     }
                 } else {
-                    (session_with_selection, StateTransition::None)
+                    (session.clone(), StateTransition::None)
                 }
             }
-            _ => (session_with_selection, StateTransition::None),
+            _ => (session.clone(), StateTransition::None),
         }
     }
 

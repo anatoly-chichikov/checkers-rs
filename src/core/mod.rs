@@ -35,19 +35,6 @@ pub struct GameMove {
 }
 
 impl GameMove {
-    #[allow(dead_code)]
-    pub fn new(from: Position, to: Position) -> Self {
-        Self { from, to }
-    }
-
-    #[allow(dead_code)]
-    pub fn from_coords(from_row: usize, from_col: usize, to_row: usize, to_col: usize) -> Self {
-        Self {
-            from: Position::new(from_row, from_col),
-            to: Position::new(to_row, to_col),
-        }
-    }
-
     pub fn from_tuples(from: (usize, usize), to: (usize, usize)) -> Self {
         Self {
             from: Position::from(from),

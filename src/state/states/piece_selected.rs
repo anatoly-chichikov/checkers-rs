@@ -13,55 +13,48 @@ impl PieceSelectedState {
 
 impl State for PieceSelectedState {
     fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
-        // First, select the piece to ensure possible moves are calculated
-        let session_with_selection =
-            match session.select_piece(self.selected_pos.0, self.selected_pos.1) {
-                Ok(s) => s,
-                Err(_) => session.clone(),
-            };
-
         match key.code {
             KeyCode::Up => {
-                let new_ui = session_with_selection.ui_state.move_cursor_up();
+                let new_ui = session.ui_state.move_cursor_up();
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Down => {
-                let new_ui = session_with_selection.ui_state.move_cursor_down(7);
+                let new_ui = session.ui_state.move_cursor_down(7);
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Left => {
-                let new_ui = session_with_selection.ui_state.move_cursor_left();
+                let new_ui = session.ui_state.move_cursor_left();
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Right => {
-                let new_ui = session_with_selection.ui_state.move_cursor_right(7);
+                let new_ui = session.ui_state.move_cursor_right(7);
                 (
-                    session_with_selection.with_ui_state(new_ui),
+                    session.with_ui_state(new_ui),
                     StateTransition::None,
                 )
             }
             KeyCode::Esc => {
-                let deselected_session = session_with_selection.deselect_piece();
+                let deselected_session = session.deselect_piece();
                 (
                     deselected_session,
                     StateTransition::To(Box::new(super::PlayingState::new())),
                 )
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
-                let cursor = session_with_selection.ui_state.cursor_pos;
+                let cursor = session.ui_state.cursor_pos;
 
                 // Deselect if same piece
                 if cursor == self.selected_pos {
-                    let deselected_session = session_with_selection.deselect_piece();
+                    let deselected_session = session.deselect_piece();
                     return (
                         deselected_session,
                         StateTransition::To(Box::new(super::PlayingState::new())),
@@ -69,18 +62,19 @@ impl State for PieceSelectedState {
                 }
 
                 // Try move
-                if session_with_selection
+                if session
                     .ui_state
                     .possible_moves
                     .contains(&cursor)
                 {
-                    match session_with_selection.try_multicapture_move(cursor.0, cursor.1) {
+                    match session.try_multicapture_move(cursor.0, cursor.1) {
                         Ok((mut updated_session, continue_capture, _positions)) => {
                             // Clear hint after player move
                             updated_session.hint = None;
 
                             // Check if multi-capture continues
                             if continue_capture {
+                                // Already selected in updated_session
                                 (
                                     updated_session,
                                     StateTransition::To(Box::new(super::MultiCaptureState::new(
@@ -113,13 +107,13 @@ impl State for PieceSelectedState {
                                 )
                             }
                         }
-                        Err(_) => (session_with_selection, StateTransition::None),
+                        Err(_) => (session.clone(), StateTransition::None),
                     }
                 } else {
-                    (session_with_selection, StateTransition::None)
+                    (session.clone(), StateTransition::None)
                 }
             }
-            _ => (session_with_selection, StateTransition::None),
+            _ => (session.clone(), StateTransition::None),
         }
     }
 
