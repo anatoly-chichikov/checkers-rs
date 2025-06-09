@@ -30,11 +30,11 @@ fn test_make_move_handles_forced_capture() {
     let mut game1 = CheckersGame::new();
 
     game1.board.cells = vec![vec![None; 8]; 8];
-    
+
     game1.board.cells[4][3] = Some(Piece::new(Color::White));
     game1.board.cells[3][4] = Some(Piece::new(Color::Black));
     game1.board.cells[2][5] = None;
-    
+
     let from = Position::new(4, 3);
     let to = Position::new(3, 2);
 

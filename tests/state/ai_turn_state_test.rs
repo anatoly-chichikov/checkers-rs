@@ -140,7 +140,7 @@ async fn test_ai_turn_state_handles_ai_error() {
         0,
         Some(checkers_rs::core::piece::Piece::new(Color::Black)),
     );
-    
+
     cleared_board.set_piece(
         7,
         2,
