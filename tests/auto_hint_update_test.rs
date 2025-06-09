@@ -35,9 +35,9 @@ async fn test_hint_updates_after_ai_move() {
     if !white_moves.is_empty() {
         let ((from_row, from_col), (to_row, to_col), _) = white_moves[0];
         // First select the piece
-        session.select_piece(from_row, from_col).unwrap();
+        let session = session.select_piece(from_row, from_col).unwrap();
         // Then make the move
-        session.make_move(to_row, to_col).unwrap();
+        let (session, _) = session.make_move(to_row, to_col).unwrap();
 
         // Verify it's now Black's turn
         assert_eq!(session.game.current_player, PieceColor::Black);
@@ -87,7 +87,7 @@ async fn test_hint_content_changes_with_board_state() {
         }
     };
 
-    let mut session = GameSession::new();
+    let session = GameSession::new();
 
     // Get hint for initial board
     let hint1 = hint_provider
@@ -100,11 +100,14 @@ async fn test_hint_content_changes_with_board_state() {
 
     // Make a move
     let white_moves = get_all_valid_moves_for_player(&session.game.board, PieceColor::White);
-    if !white_moves.is_empty() {
+    let session = if !white_moves.is_empty() {
         let ((from_row, from_col), (to_row, to_col), _) = white_moves[0];
-        session.select_piece(from_row, from_col).unwrap();
-        session.make_move(to_row, to_col).unwrap();
-    }
+        let session = session.select_piece(from_row, from_col).unwrap();
+        let (session, _) = session.make_move(to_row, to_col).unwrap();
+        session
+    } else {
+        session
+    };
 
     // Get hint for new board state
     let hint2 = hint_provider

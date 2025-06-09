@@ -12,67 +12,69 @@ impl MultiCaptureState {
 }
 
 impl State for MultiCaptureState {
-    fn handle_input(&mut self, session: &mut GameSession, key: KeyEvent) -> StateTransition {
+    fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
         match key.code {
             KeyCode::Up => {
-                session.ui_state.move_cursor_up();
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_up();
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Down => {
-                session.ui_state.move_cursor_down(7);
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_down(7);
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Left => {
-                session.ui_state.move_cursor_left();
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_left();
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Right => {
-                session.ui_state.move_cursor_right(7);
-                StateTransition::None
+                let new_ui = session.ui_state.move_cursor_right(7);
+                (session.with_ui_state(new_ui), StateTransition::None)
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor = session.ui_state.cursor_pos;
                 if session.ui_state.possible_moves.contains(&cursor) {
                     match session.try_multicapture_move(cursor.0, cursor.1) {
-                        Ok((continue_capture, _positions)) => {
+                        Ok((updated_session, continue_capture, _positions)) => {
                             // Check if capture continues
                             if continue_capture {
-                                self.capturing_piece = cursor;
-                                self.on_enter(session); // Update possible moves
-                                StateTransition::None
-                            } else if session.game.check_winner().is_some() {
-                                session.game.is_game_over = true;
-                                StateTransition::To(Box::new(super::GameOverState::new(
-                                    session.game.check_winner(),
-                                )))
-                            } else if session.game.is_stalemate() {
+                                (
+                                    updated_session,
+                                    StateTransition::To(Box::new(MultiCaptureState::new(cursor))),
+                                )
+                            } else if updated_session.game.check_winner().is_some() {
+                                let mut game_over_session = updated_session.clone();
+                                game_over_session.game.is_game_over = true;
+                                (
+                                    game_over_session,
+                                    StateTransition::To(Box::new(super::GameOverState::new(
+                                        updated_session.game.check_winner(),
+                                    ))),
+                                )
+                            } else if updated_session.game.is_stalemate() {
                                 // If current player has no moves, the other player wins
-                                session.game.is_game_over = true;
-                                StateTransition::To(Box::new(super::GameOverState::new(Some(
-                                    session.game.current_player.opposite(),
-                                ))))
+                                let mut game_over_session = updated_session.clone();
+                                game_over_session.game.is_game_over = true;
+                                (
+                                    game_over_session,
+                                    StateTransition::To(Box::new(super::GameOverState::new(Some(
+                                        updated_session.game.current_player.opposite(),
+                                    )))),
+                                )
                             } else {
-                                StateTransition::To(Box::new(super::PlayingState::new()))
+                                (
+                                    updated_session,
+                                    StateTransition::To(Box::new(super::PlayingState::new())),
+                                )
                             }
                         }
-                        Err(_) => StateTransition::None,
+                        Err(_) => (session.clone(), StateTransition::None),
                     }
                 } else {
-                    StateTransition::None
+                    (session.clone(), StateTransition::None)
                 }
             }
-            _ => StateTransition::None,
+            _ => (session.clone(), StateTransition::None),
         }
-    }
-
-    fn on_enter(&mut self, session: &mut GameSession) {
-        session
-            .ui_state
-            .select_piece(self.capturing_piece, &session.game.board);
-    }
-
-    fn on_exit(&mut self, session: &mut GameSession) {
-        session.ui_state.clear_selection();
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {

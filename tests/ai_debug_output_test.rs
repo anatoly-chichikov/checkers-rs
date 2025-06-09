@@ -30,11 +30,11 @@ async fn test_ai_move_without_debug_output() {
     }
 
     // Set up a game where it's Black's turn
-    let mut session = GameSession::new();
+    let session = GameSession::new();
 
     // First make a white move
-    session.select_piece(5, 0).unwrap();
-    session.make_move(4, 1).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
+    let (session, _) = session.make_move(4, 1).unwrap();
 
     // Now it's Black's turn - call get_ai_move
     // In the fixed version, this should not print debug output

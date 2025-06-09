@@ -12,22 +12,24 @@ impl AIState {
         }
     }
 
-    pub fn start_thinking(&mut self) {
-        self.is_thinking = true;
-        self.last_error = None;
+    pub fn start_thinking(&self) -> Self {
+        let mut new_state = self.clone();
+        new_state.is_thinking = true;
+        new_state.last_error = None;
+        new_state
     }
 
-    pub fn stop_thinking(&mut self) {
-        self.is_thinking = false;
+    pub fn set_error(&self, error: String) -> Self {
+        let mut new_state = self.clone();
+        new_state.last_error = Some(error);
+        new_state.is_thinking = false;
+        new_state
     }
 
-    pub fn set_error(&mut self, error: String) {
-        self.last_error = Some(error);
-        self.is_thinking = false;
-    }
-
-    pub fn clear_error(&mut self) {
-        self.last_error = None;
+    pub fn clear_error(&self) -> Self {
+        let mut new_state = self.clone();
+        new_state.last_error = None;
+        new_state
     }
 }
 

@@ -5,10 +5,10 @@ use checkers_rs::test_helpers::MultiCaptureCheck;
 
 #[test]
 fn test_deselection_allowed_when_clicking_outside_possible_moves() {
-    let mut session = GameSession::new();
+    let session = GameSession::new();
 
     // Select a white piece that has normal moves
-    session.select_piece(5, 0).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
     assert!(session.ui_state.selected_piece.is_some());
     assert!(!session.ui_state.possible_moves.is_empty());
 
@@ -17,7 +17,7 @@ fn test_deselection_allowed_when_clicking_outside_possible_moves() {
     assert!(!session.is_in_multi_capture());
 
     // Clear selection by selecting the same piece
-    session.select_piece(5, 0).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
 
     assert!(session.ui_state.selected_piece.is_none());
     assert!(session.ui_state.possible_moves.is_empty());
@@ -44,10 +44,10 @@ fn test_deselection_blocked_during_multi_capture() {
         .set_piece(2, 5, Some(Piece::new(Color::Black)));
 
     // Select the white piece
-    session.select_piece(5, 2).unwrap();
+    let session = session.select_piece(5, 2).unwrap();
 
     // Make the first capture
-    session.make_move(3, 4).unwrap();
+    let (session, _) = session.make_move(3, 4).unwrap();
 
     // Now the piece should be at (3, 4) and must continue capturing
     assert_eq!(session.ui_state.selected_piece, Some((3, 4)));
@@ -62,10 +62,10 @@ fn test_deselection_blocked_during_multi_capture() {
 
 #[test]
 fn test_is_in_multi_capture_returns_false_for_normal_moves() {
-    let mut session = GameSession::new();
+    let session = GameSession::new();
 
     // Select a piece with only normal moves
-    session.select_piece(5, 0).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
 
     // Should not be in multi-capture state
     assert!(!session.is_in_multi_capture());
@@ -91,7 +91,7 @@ fn test_is_in_multi_capture_returns_true_when_only_captures_available() {
         .set_piece(3, 1, Some(Piece::new(Color::Black)));
 
     session.game.current_player = Color::White;
-    session.select_piece(4, 2).unwrap();
+    let session = session.select_piece(4, 2).unwrap();
 
     // Check that all possible moves are captures
     let moves = &session.ui_state.possible_moves;
@@ -120,7 +120,7 @@ fn test_deselection_with_mixed_moves_not_multi_capture() {
 
     // Ensure there are no captures available from this position
     session.game.current_player = Color::White;
-    session.select_piece(5, 2).unwrap();
+    let session = session.select_piece(5, 2).unwrap();
 
     // Check that piece has normal moves (not captures)
     let moves = &session.ui_state.possible_moves;
@@ -171,20 +171,20 @@ fn test_forced_capture_prevents_selecting_non_capturing_piece() {
 
 #[test]
 fn test_deselection_resets_completely() {
-    let mut session = GameSession::new();
+    let session = GameSession::new();
 
     // Select a piece
-    session.select_piece(5, 0).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
     let initial_moves = session.ui_state.possible_moves.clone();
     assert!(!initial_moves.is_empty());
 
     // Deselect by selecting same piece
-    session.select_piece(5, 0).unwrap();
+    let session = session.select_piece(5, 0).unwrap();
     assert!(session.ui_state.selected_piece.is_none());
     assert!(session.ui_state.possible_moves.is_empty());
 
     // Select a different piece
-    session.select_piece(5, 2).unwrap();
+    let session = session.select_piece(5, 2).unwrap();
 
     // Should have different possible moves
     assert!(!session.ui_state.possible_moves.is_empty());
@@ -215,8 +215,8 @@ fn test_multi_capture_sequence_maintains_selection() {
     session.game.current_player = Color::White;
 
     // Select and make first capture
-    session.select_piece(5, 2).unwrap();
-    session.make_move(3, 4).unwrap();
+    let session = session.select_piece(5, 2).unwrap();
+    let (session, _) = session.make_move(3, 4).unwrap();
 
     // Should still be selected for continuation
     assert_eq!(session.ui_state.selected_piece, Some((3, 4)));
@@ -230,7 +230,7 @@ fn test_multi_capture_sequence_maintains_selection() {
     assert!(session.is_in_multi_capture());
 
     // Make final capture
-    session.make_move(1, 6).unwrap();
+    let (session, _) = session.make_move(1, 6).unwrap();
 
     // Now should be deselected (no more captures)
     assert_eq!(session.ui_state.selected_piece, None);

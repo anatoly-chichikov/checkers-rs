@@ -2,6 +2,7 @@ use crate::core::board::Board;
 use crate::core::game_logic::{self, can_piece_capture};
 use crate::core::move_history::MoveHistory;
 use crate::core::piece::Color;
+use crate::core::GameMove;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -61,30 +62,41 @@ impl CheckersGame {
         }
     }
 
-    pub fn make_move(
-        &mut self,
+    pub fn make_move(&self, game_move: GameMove) -> Result<(Self, bool), GameError> {
+        self.make_move_coords(
+            game_move.from.row,
+            game_move.from.col,
+            game_move.to.row,
+            game_move.to.col,
+        )
+    }
+
+    pub fn make_move_coords(
+        &self,
         from_row: usize,
         from_col: usize,
         to_row: usize,
         to_col: usize,
-    ) -> Result<bool, GameError> {
-        if !self.board.in_bounds(to_row, to_col) {
+    ) -> Result<(Self, bool), GameError> {
+        let mut new_game = self.clone();
+
+        if !new_game.board.in_bounds(to_row, to_col) {
             return Err(GameError::OutOfBounds);
         }
 
-        let piece = self
+        let piece = new_game
             .board
             .get_piece(from_row, from_col)
             .ok_or(GameError::NoPieceSelected)?;
 
-        if self.has_captures_available() {
+        if new_game.has_captures_available() {
             let row_diff = (to_row as i32 - from_row as i32).abs();
             if row_diff != 2 {
                 return Err(GameError::ForcedCaptureAvailable);
             }
         }
 
-        if !game_logic::is_valid_move(&self.board, from_row, from_col, to_row, to_col, &piece) {
+        if !game_logic::is_valid_move(&new_game.board, from_row, from_col, to_row, to_col, &piece) {
             return Err(GameError::InvalidMove);
         }
 
@@ -94,42 +106,41 @@ impl CheckersGame {
             let mid_row = (from_row + to_row) / 2;
             let mid_col = (from_col + to_col) / 2;
             captured.push((mid_row, mid_col));
-            self.board.set_piece(mid_row, mid_col, None);
+            new_game.board.set_piece(mid_row, mid_col, None);
         }
 
-        self.board
+        new_game
+            .board
             .move_piece((from_row, from_col), (to_row, to_col));
 
         let mut became_king = false;
-        if game_logic::should_promote(&piece, to_row, self.board.size) {
-            if let Some(mut promoted_piece) = self.board.get_piece(to_row, to_col) {
+        if game_logic::should_promote(&piece, to_row, new_game.board.size) {
+            if let Some(mut promoted_piece) = new_game.board.get_piece(to_row, to_col) {
                 promoted_piece.promote_to_king();
-                self.board.set_piece(to_row, to_col, Some(promoted_piece));
+                new_game
+                    .board
+                    .set_piece(to_row, to_col, Some(promoted_piece));
                 became_king = true;
             }
         }
 
         // Record the move in history
-        self.move_history.add_move(
+        new_game.move_history.add_move(
             (from_row, from_col),
             (to_row, to_col),
-            self.current_player,
+            new_game.current_player,
             captured,
             became_king,
         );
 
         let continue_capture = row_diff_abs == 2
-            && game_logic::has_more_captures_for_piece(&self.board, to_row, to_col);
+            && game_logic::has_more_captures_for_piece(&new_game.board, to_row, to_col);
 
         if !continue_capture {
-            self.switch_player();
+            new_game.current_player = new_game.current_player.opposite();
         }
 
-        Ok(continue_capture)
-    }
-
-    pub fn switch_player(&mut self) {
-        self.current_player = self.current_player.opposite();
+        Ok((new_game, continue_capture))
     }
 
     pub fn check_winner(&self) -> Option<Color> {
@@ -142,5 +153,11 @@ impl CheckersGame {
 
     pub fn is_stalemate(&self) -> bool {
         game_logic::is_stalemate(&self.board, self.current_player)
+    }
+
+    pub fn with_switched_player(&self) -> Self {
+        let mut new_game = self.clone();
+        new_game.current_player = new_game.current_player.opposite();
+        new_game
     }
 }

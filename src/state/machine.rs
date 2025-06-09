@@ -5,11 +5,7 @@ use crate::state::StateType;
 use crossterm::event::KeyEvent;
 
 pub trait State {
-    fn handle_input(&mut self, session: &mut GameSession, key: KeyEvent) -> StateTransition;
-
-    fn on_enter(&mut self, session: &mut GameSession);
-
-    fn on_exit(&mut self, session: &mut GameSession);
+    fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition);
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a>;
 
@@ -17,19 +13,22 @@ pub trait State {
 }
 
 pub struct StateMachine {
-    current_state: Box<dyn State>,
+    current_state: Box<dyn State + 'static>,
 }
 
 impl StateMachine {
-    pub fn new(initial_state: Box<dyn State>) -> Self {
+    pub fn new(initial_state: Box<dyn State + 'static>) -> Self {
         Self {
             current_state: initial_state,
         }
     }
 
-    pub fn handle_input(&mut self, session: &mut GameSession, key: KeyEvent) {
-        let transition = self.current_state.handle_input(session, key);
-        self.process_transition(session, transition);
+    pub fn handle_input(
+        &self,
+        session: &GameSession,
+        key: KeyEvent,
+    ) -> (GameSession, StateTransition) {
+        self.current_state.handle_input(session, key)
     }
 
     pub fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
@@ -40,12 +39,10 @@ impl StateMachine {
         self.current_state.state_type()
     }
 
-    fn process_transition(&mut self, session: &mut GameSession, transition: StateTransition) {
+    pub fn process_transition(&mut self, transition: StateTransition) {
         match transition {
             StateTransition::None => {}
-            StateTransition::To(mut new_state) => {
-                self.current_state.on_exit(session);
-                new_state.on_enter(session);
+            StateTransition::To(new_state) => {
                 self.current_state = new_state;
             }
             StateTransition::Exit => {

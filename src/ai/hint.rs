@@ -11,6 +11,7 @@ use genai::{
 };
 use std::env;
 
+#[derive(Clone)]
 pub struct HintProvider {
     api_key: String,
     model: String,
@@ -94,6 +95,7 @@ impl HintProvider {
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
         let result = result.map_err(|e| {
+            #[cfg(debug_assertions)]
             eprintln!("Hint API error: {:?}", e);
             Box::new(std::io::Error::other(format!("API request failed: {}", e)))
                 as Box<dyn std::error::Error>
@@ -102,6 +104,7 @@ impl HintProvider {
         match result.content_text_as_str() {
             Some(text) => Ok(text.trim().to_string()),
             None => {
+                #[cfg(debug_assertions)]
                 eprintln!("Hint response has no text content");
                 Err("Failed to parse hint from API response".into())
             }

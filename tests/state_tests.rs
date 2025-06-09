@@ -17,10 +17,10 @@ fn test_welcome_state_transitions_to_playing_on_enter() {
     let mut session = GameSession::new();
     session.welcome_content = Some(content);
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test Enter key transitions to PlayingState
-    let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Enter));
+    let (_, transition) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
 
     match transition {
         StateTransition::To(next_state) => {
@@ -44,10 +44,10 @@ fn test_welcome_state_exits_on_esc() {
     let mut session = GameSession::new();
     session.welcome_content = Some(content);
 
-    let mut state = WelcomeState::new();
+    let state = WelcomeState::new();
 
     // Test ESC key exits
-    let transition = state.handle_input(&mut session, KeyEvent::from(KeyCode::Esc));
+    let (_, transition) = state.handle_input(&session, KeyEvent::from(KeyCode::Esc));
 
     match transition {
         StateTransition::Exit => {
