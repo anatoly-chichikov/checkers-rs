@@ -1,9 +1,8 @@
-use checkers_rs::core::{board::Board, piece::Color};
+use checkers_rs::ai::formatting::format_square;
 
-fn format_square(row: usize, col: usize) -> String {
-    format!("{}{}", (col as u8 + b'A') as char, row + 1)
-}
-
+// Parses a square notation (e.g., "A1", "H8") into internal (row, col) coordinates.
+// This is the inverse of ai::formatting::format_square.
+// "A1" corresponds to (7,0), "H8" to (0,7).
 fn parse_square(square: &str) -> Option<(usize, usize)> {
     let chars: Vec<char> = square.chars().collect();
     if chars.len() != 2 {
@@ -11,9 +10,10 @@ fn parse_square(square: &str) -> Option<(usize, usize)> {
     }
 
     let col = (chars[0] as u8).wrapping_sub(b'A') as usize;
-    let row = chars[1].to_digit(10)? as usize - 1;
+    let display_row_num = chars[1].to_digit(10)? as usize;
 
-    if col < 8 && row < 8 {
+    if col < 8 && display_row_num >= 1 && display_row_num <= 8 {
+        let row = 8 - display_row_num; // Convert display row (1-8) to internal row (7-0)
         Some((row, col))
     } else {
         None
@@ -22,27 +22,34 @@ fn parse_square(square: &str) -> Option<(usize, usize)> {
 
 #[test]
 fn test_format_square_corners() {
-    // Test all corners of the board
-    assert_eq!(format_square(0, 0), "A1"); // Top-left
-    assert_eq!(format_square(0, 7), "H1"); // Top-right
-    assert_eq!(format_square(7, 0), "A8"); // Bottom-left
-    assert_eq!(format_square(7, 7), "H8"); // Bottom-right
+    // Test all corners of the board using checkers_rs::ai::formatting::format_square
+    // Top-left (row 0, col 0) should be A8 (display row 8)
+    assert_eq!(format_square(0, 0), "A8");
+    // Top-right (row 0, col 7) should be H8 (display row 8)
+    assert_eq!(format_square(0, 7), "H8");
+    // Bottom-left (row 7, col 0) should be A1 (display row 1)
+    assert_eq!(format_square(7, 0), "A1");
+    // Bottom-right (row 7, col 7) should be H1 (display row 1)
+    assert_eq!(format_square(7, 7), "H1");
 }
 
 #[test]
 fn test_format_square_middle() {
-    assert_eq!(format_square(3, 3), "D4"); // Middle of board
-    assert_eq!(format_square(3, 7), "H4"); // The position mentioned in hint
-    assert_eq!(format_square(5, 5), "F6"); // The target mentioned in hint
+    // Middle of board (row 3, col 3) -> D5 (display row 8-3=5)
+    assert_eq!(format_square(3, 3), "D5");
+    // (row 3, col 7) -> H5 (display row 8-3=5)
+    assert_eq!(format_square(3, 7), "H5");
+    // (row 5, col 5) -> F3 (display row 8-5=3)
+    assert_eq!(format_square(5, 5), "F3");
 }
 
 #[test]
 fn test_parse_square() {
-    assert_eq!(parse_square("A1"), Some((0, 0)));
-    assert_eq!(parse_square("H8"), Some((7, 7)));
-    assert_eq!(parse_square("D4"), Some((3, 3)));
-    assert_eq!(parse_square("H4"), Some((3, 7)));
-    assert_eq!(parse_square("F6"), Some((5, 5)));
+    assert_eq!(parse_square("A1"), Some((7, 0))); // Display A1 is internal (7,0)
+    assert_eq!(parse_square("H8"), Some((0, 7))); // Display H8 is internal (0,7)
+    assert_eq!(parse_square("D4"), Some((4, 3))); // Display D4 is internal (4,3)
+    assert_eq!(parse_square("H4"), Some((4, 7))); // Display H4 is internal (4,7)
+    assert_eq!(parse_square("F6"), Some((2, 5))); // Display F6 is internal (2,5)
 }
 
 #[test]
@@ -59,39 +66,5 @@ fn test_format_parse_roundtrip() {
                 col
             );
         }
-    }
-}
-
-#[test]
-fn test_board_position_h4() {
-    // According to the screenshot, h4 should have a white piece
-    // Let's verify what h4 means in our coordinate system
-    let (row, col) = parse_square("H4").unwrap();
-    assert_eq!((row, col), (3, 7)); // Row 4 (index 3), Column H (index 7)
-
-    // Create a board and check if there's a piece at that position
-    let mut board = Board::new(8);
-    board.initialize();
-
-    // In initial position, row 3 should be empty
-    assert_eq!(board.get_piece(row, col), None);
-
-    // But in the game state shown, there should be a white piece there
-    // This test documents the expected behavior
-}
-
-#[test]
-fn test_board_position_f6() {
-    // F6 is the suggested move target
-    let (row, col) = parse_square("F6").unwrap();
-    assert_eq!((row, col), (5, 5)); // Row 6 (index 5), Column F (index 5)
-
-    // In initial position, this should have a white piece
-    let mut board = Board::new(8);
-    board.initialize();
-
-    // Check initial position
-    if let Some(piece) = board.get_piece(row, col) {
-        assert_eq!(piece.color, Color::White);
     }
 }

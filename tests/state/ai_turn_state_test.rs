@@ -30,6 +30,10 @@ fn test_ai_turn_state_shows_ai_error_if_present() {
 
 #[tokio::test]
 async fn test_ai_turn_state_makes_ai_move() {
+    // Ensure AI_TEST_MODE is set to use deterministic/mocked AI logic if available,
+    // preventing actual LLM calls or sleeps.
+    std::env::set_var("AI_TEST_MODE", "1");
+
     let mut initial_session = GameSession::new();
     initial_session.game = initial_session.game.with_switched_player();
     assert_eq!(initial_session.game.current_player, Color::Black);
@@ -39,6 +43,9 @@ async fn test_ai_turn_state_makes_ai_move() {
     // Call handle_input which should make a move immediately in test mode
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
+
+    // It's good practice to clean up env vars set by tests, though test runners often isolate.
+    std::env::remove_var("AI_TEST_MODE");
 
     match transition {
         StateTransition::To(next_state) => {

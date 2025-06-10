@@ -7,6 +7,8 @@ use tokio;
 
 #[tokio::test]
 #[serial]
+#[ignore] // This test relies on external API calls (LLM) and network access,
+          // making it slow and non-deterministic. Better suited for E2E/manual tests.
 async fn test_hint_updates_after_ai_move() {
     // Skip test if GEMINI_API_KEY is not set
     let api_key = match env::var("GEMINI_API_KEY") {
@@ -69,6 +71,8 @@ async fn test_hint_updates_after_ai_move() {
 
 #[tokio::test]
 #[serial]
+#[ignore] // This test relies on external API calls (LLM) and network access,
+          // making it slow and non-deterministic. Better suited for E2E/manual tests.
 async fn test_hint_content_changes_with_board_state() {
     // Skip test if GEMINI_API_KEY is not set
     let api_key = match env::var("GEMINI_API_KEY") {
@@ -130,6 +134,8 @@ async fn test_hint_content_changes_with_board_state() {
 
 #[tokio::test]
 #[serial]
+#[ignore] // This test relies on external API calls (LLM) and network access,
+          // making it slow and non-deterministic. Better suited for E2E/manual tests.
 async fn test_hint_provider_handles_api_failures_gracefully() {
     // Test with invalid API key
     let hint_provider = match HintProvider::new("invalid_key".to_string()) {

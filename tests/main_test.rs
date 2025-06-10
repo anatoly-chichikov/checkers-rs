@@ -7,6 +7,9 @@ use ctrlc;
 use libc;
 
 #[test]
+#[ignore] // This test sends SIGINT to the current process, which can disrupt
+          // the test runner or other parallel tests, especially in CI.
+          // It tests global state and is better suited for manual/integration testing.
 fn test_ctrl_c_handler() {
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();

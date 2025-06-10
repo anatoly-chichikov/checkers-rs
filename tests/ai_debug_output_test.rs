@@ -4,6 +4,8 @@ use std::env;
 use tokio;
 
 #[tokio::test]
+#[ignore] // This test makes real API calls and lacks strong assertions.
+          // It's more suitable for manual or end-to-end testing.
 async fn test_ai_move_without_debug_output() {
     // Skip test if GEMINI_API_KEY is not set
     if env::var("GEMINI_API_KEY").is_err() {
