@@ -101,9 +101,6 @@ async fn test_ai_turn_state_transitions_to_game_over_if_no_moves() {
 
     let state = AITurnState::new();
 
-    // Sleep to pass thinking time
-    std::thread::sleep(std::time::Duration::from_millis(600));
-
     // Should detect no valid moves and transition to GameOver
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
@@ -152,8 +149,6 @@ async fn test_ai_turn_state_simple_ai_makes_move_on_custom_board() {
     initial_session.game = new_game;
 
     let state = AITurnState::new();
-
-    std::thread::sleep(std::time::Duration::from_millis(600));
 
     let (new_session, transition) =
         state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));

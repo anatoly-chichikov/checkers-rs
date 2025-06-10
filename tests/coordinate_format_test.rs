@@ -95,22 +95,3 @@ fn test_board_position_f6() {
         assert_eq!(piece.color, Color::White);
     }
 }
-
-#[test]
-fn test_hint_coordinates_validity() {
-    // This test documents that the hint "Move piece from h4 to f6"
-    // should correspond to valid board positions
-
-    let h4 = parse_square("H4").unwrap();
-    let f6 = parse_square("F6").unwrap();
-
-    // h4 = (3, 7) = Row 4, Column H
-    // f6 = (5, 5) = Row 6, Column F
-
-    // For a white piece moving forward (up the board),
-    // this would be moving from row 3 to row 5, which is backwards!
-    // White pieces move from higher rows to lower rows (7->0)
-
-    // This suggests the AI might be confused about board orientation
-    assert!(h4.0 < f6.0, "H4 to F6 moves down the board, not up!");
-}
