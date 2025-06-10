@@ -3,24 +3,6 @@ use checkers_rs::state::GameSession;
 use std::env;
 use tokio;
 
-#[test]
-fn test_ai_debug_messages_should_not_be_in_stderr() {
-    // This test verifies that debug messages like "AI raw response"
-    // should not be printed to stderr in production code
-
-    // The presence of eprintln! statements in get_ai_move function
-    // causes debug output to appear in the game interface
-
-    // We can't easily test stderr output in unit tests,
-    // but we can document the expected behavior
-
-    // Expected: No debug output should be printed to stderr
-    // Actual: eprintln! statements in genai_client.rs print debug info
-
-    // This test serves as documentation that these debug statements
-    // should be removed or conditionally compiled
-}
-
 #[tokio::test]
 async fn test_ai_move_without_debug_output() {
     // Skip test if GEMINI_API_KEY is not set
@@ -47,17 +29,4 @@ async fn test_ai_move_without_debug_output() {
             // AI error is ok for this test
         }
     }
-}
-
-#[test]
-fn test_debug_output_should_be_conditionally_compiled() {
-    // This test documents that debug output should use conditional compilation
-    // For example:
-    // #[cfg(debug_assertions)]
-    // eprintln!("AI raw response: '{}'", text_response);
-
-    // Or use a debug flag:
-    // if std::env::var("DEBUG_AI").is_ok() {
-    //     eprintln!("AI raw response: '{}'", text_response);
-    // }
 }

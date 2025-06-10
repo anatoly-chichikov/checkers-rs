@@ -123,7 +123,7 @@ async fn test_ai_turn_state_transitions_to_game_over_if_no_moves() {
 }
 
 #[tokio::test]
-async fn test_ai_turn_state_handles_ai_error() {
+async fn test_ai_turn_state_simple_ai_makes_move_on_custom_board() {
     std::env::set_var("AI_TEST_MODE", "1");
     let mut initial_session = GameSession::new();
     initial_session.game = initial_session.game.with_switched_player();
