@@ -13,6 +13,12 @@ A terminal-based Checkers game built with Rust.
 - Arrow key navigation with visual feedback
 - Full checkers rules including forced captures and king promotion
 
+<div align="center">
+  <img src="img/game-with-hint.png" alt="img" width="600">
+  <br>
+  <em>The game interface showing the board state with an AI hint suggesting the best move (B4 to D6)</em>
+</div>
+
 **Getting Started:**
 
 1. **Install Rust:**
