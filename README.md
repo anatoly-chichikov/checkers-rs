@@ -17,8 +17,9 @@ A terminal-based Checkers game built with Rust.
   <img src="img/game-with-hint.png" alt="img" width="600">
   <br>
   <em>The game interface showing the board state with an AI hint suggesting the best move (B4 to D6)</em>
+  <br>
+  <br>
 </div>
-
 
 **Getting Started:**
 
