@@ -19,6 +19,7 @@ A terminal-based Checkers game built with Rust.
   <em>The game interface showing the board state with an AI hint suggesting the best move (B4 to D6)</em>
 </div>
 
+
 **Getting Started:**
 
 1. **Install Rust:**
