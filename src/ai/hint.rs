@@ -41,7 +41,7 @@ impl HintProvider {
             let from_sq = format_square(*from_row, *from_col);
             let to_sq = format_square(*to_row, *to_col);
             let move_type = if *is_capture { "capture" } else { "move" };
-            moves_str.push_str(&format!("- {} to {} ({})\n", from_sq, to_sq, move_type));
+            moves_str.push_str(&format!("- {from_sq} to {to_sq} ({move_type})\n"));
         }
 
         let prompt_template = get_hint_prompt();
@@ -96,8 +96,8 @@ impl HintProvider {
 
         let result = result.map_err(|e| {
             #[cfg(debug_assertions)]
-            eprintln!("Hint API error: {:?}", e);
-            Box::new(std::io::Error::other(format!("API request failed: {}", e)))
+            eprintln!("Hint API error: {e:?}");
+            Box::new(std::io::Error::other(format!("API request failed: {e}")))
                 as Box<dyn std::error::Error>
         })?;
 

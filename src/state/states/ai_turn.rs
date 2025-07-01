@@ -110,7 +110,7 @@ impl State for AITurnState {
                             Err(e) => {
                                 new_session.ai_state = new_session
                                     .ai_state
-                                    .set_error(format!("AI failed to move: {}", e));
+                                    .set_error(format!("AI failed to move: {e}"));
                                 new_session.game = new_session.game.with_switched_player();
                                 return (
                                     new_session,
@@ -121,7 +121,7 @@ impl State for AITurnState {
                     }
                     Err(e) => {
                         new_session.ai_state =
-                            new_session.ai_state.set_error(format!("AI Error: {}", e));
+                            new_session.ai_state.set_error(format!("AI Error: {e}"));
                         new_session.game = new_session.game.with_switched_player();
                         return (
                             new_session,
@@ -203,7 +203,7 @@ impl State for AITurnState {
                         }
                         Err(e) => {
                             new_session.ai_state =
-                                new_session.ai_state.set_error(format!("AI error: {}", e));
+                                new_session.ai_state.set_error(format!("AI error: {e}"));
                             return (
                                 new_session,
                                 StateTransition::To(Box::new(super::PlayingState::new())),

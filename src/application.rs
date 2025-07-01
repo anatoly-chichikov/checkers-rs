@@ -74,7 +74,7 @@ impl Application {
                 Self::default_welcome_content()
             }
             Err(e) => {
-                eprintln!("Failed to get checkers content from AI: {}", e);
+                eprintln!("Failed to get checkers content from AI: {e}");
                 Self::default_welcome_content()
             }
         }

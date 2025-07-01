@@ -78,7 +78,7 @@ impl<'a> CheckerBoard<'a> {
                     (PieceColor::White, false) => "(w)",
                     (PieceColor::White, true) => "(W)",
                 };
-                format!(" {} ", piece_char)
+                format!(" {piece_char} ")
             }
         };
 

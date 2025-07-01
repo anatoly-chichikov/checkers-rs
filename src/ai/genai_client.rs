@@ -82,7 +82,7 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
             let mid_row = (from_row + to_row) / 2;
             let mid_col = (from_col + to_col) / 2;
             let formatted_captured_sq = format_square(mid_row, mid_col);
-            move_desc.push_str(&format!(" (captures piece at {})", formatted_captured_sq));
+            move_desc.push_str(&format!(" (captures piece at {formatted_captured_sq})"));
         }
         moves_str.push_str(&move_desc);
         moves_str.push('\n');
@@ -135,8 +135,7 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
                     text_response
                 ))),
                 Err(_) => Err(AIError::InvalidResponseFormat(format!(
-                    "AI returned non-numeric or invalid response: '{}'. Cleaned: '{}'",
-                    text_response, cleaned_response
+                    "AI returned non-numeric or invalid response: '{text_response}'. Cleaned: '{cleaned_response}'"
                 ))),
             }
         }
