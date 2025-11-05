@@ -14,15 +14,13 @@ use crate::interface::messages;
 use crate::utils::prompts::get_ai_move_prompt;
 
 pub async fn explain_rules() -> Result<String, AIError> {
-    dotenv::dotenv().ok();
-
-    let api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
+    // Environment variables are loaded once at startup in main.rs
+    let _api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
     let model = env::var("GEMINI_MODEL").map_err(|_| AIError::NoModel)?;
 
     let (running, loading_thread) = start_loading_animation()?;
 
-    // Create client with the API key set in environment
-    env::set_var("GEMINI_API_KEY", api_key);
+    // Create client - it will read GEMINI_API_KEY from environment
     let client = Client::default();
 
     let chat_req = ChatRequest::new(vec![ChatMessage::user(messages::STORY_PROMPT)]);
@@ -55,8 +53,8 @@ pub async fn explain_rules() -> Result<String, AIError> {
 }
 
 pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize, usize)), AIError> {
-    dotenv::dotenv().ok();
-    let api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
+    // Environment variables are loaded once at startup in main.rs
+    let _api_key = env::var("GEMINI_API_KEY").map_err(|_| AIError::NoApiKey)?;
 
     if game.current_player != PieceColor::Black {
         return Err(AIError::InvalidResponseFormat(
@@ -93,8 +91,7 @@ pub async fn get_ai_move(game: &CheckersGame) -> Result<((usize, usize), (usize,
         .replace("{board_state}", &board_representation)
         .replace("{available_moves}", moves_str.trim());
 
-    // Create client with the API key set in environment
-    env::set_var("GEMINI_API_KEY", api_key);
+    // Create client - it will read GEMINI_API_KEY from environment
     let client = Client::default();
     let model = env::var("GEMINI_MODEL").map_err(|_| AIError::NoModel)?;
 

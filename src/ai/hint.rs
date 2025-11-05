@@ -72,8 +72,8 @@ impl HintProvider {
                 },
             );
 
-        // Set API key in environment for genai client
-        env::set_var("GEMINI_API_KEY", &self.api_key);
+        // Create client - it will read GEMINI_API_KEY from environment
+        // The api_key field is kept for backwards compatibility but not used
         let client = Client::default();
 
         let chat_req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
