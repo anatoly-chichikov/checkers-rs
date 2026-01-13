@@ -1,9 +1,10 @@
-use crate::ai::{hint::HintProvider, Hint};
+use crate::ai::{Agent, Hint};
 use crate::core::game::{CheckersGame, GameError};
 use crate::core::game_logic::find_capture_path;
 use crate::state::ai_state::AIState;
 use crate::state::states::WelcomeContent;
 use crate::state::ui_state::UIState;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct GameSession {
@@ -11,7 +12,7 @@ pub struct GameSession {
     pub ui_state: UIState,
     pub ai_state: AIState,
     pub hint: Option<Hint>,
-    pub hint_provider: Option<HintProvider>,
+    pub ai_agent: Option<Arc<dyn Agent + Send + Sync>>,
     pub welcome_content: Option<WelcomeContent>,
 }
 
@@ -23,7 +24,7 @@ impl Default for GameSession {
             ui_state: UIState::new(),
             ai_state: AIState::new(),
             hint: None,
-            hint_provider: None,
+            ai_agent: None,
             welcome_content: None,
         }
     }
