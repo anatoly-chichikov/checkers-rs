@@ -1,5 +1,5 @@
 use crate::ai::config::AIConfig;
-use crate::ai::contract::{BoxFuture, HintGiver, MoveChooser, RulesExplainer};
+use crate::ai::contract::{BoxFuture, Choice, HintGiver, MoveChooser, Moves, RulesExplainer};
 use crate::ai::error::AIError;
 use crate::ai::formatting::{board, square};
 use crate::ai::ui::{animate_start, animate_start_with_message, animate_stop};
@@ -47,10 +47,7 @@ impl GeminiAI {
     }
 
     /// Selects a move for the current black player.
-    async fn select(
-        &self,
-        game: &CheckersGame,
-    ) -> Result<((usize, usize), (usize, usize)), AIError> {
+    async fn select(&self, game: &CheckersGame) -> Result<Choice, AIError> {
         dotenv::dotenv().ok();
         if game.current_player != PieceColor::Black {
             return Err(AIError::InvalidResponseFormat(
@@ -127,10 +124,7 @@ impl GeminiAI {
     }
 
     /// Renders prompt for AI move selection.
-    fn movelist(
-        possible_moves: &Vec<((usize, usize), (usize, usize), bool)>,
-        board_state: &Board,
-    ) -> String {
+    fn movelist(possible_moves: &Moves, board_state: &Board) -> String {
         let board_representation = board(board_state);
         let mut moves_str = String::new();
         for (i, ((from_row, from_col), (to_row, to_col), is_capture)) in
@@ -211,10 +205,7 @@ impl RulesExplainer for GeminiAI {
 }
 
 impl MoveChooser for GeminiAI {
-    fn choose<'a>(
-        &'a self,
-        game: &'a CheckersGame,
-    ) -> BoxFuture<'a, Result<((usize, usize), (usize, usize)), AIError>> {
+    fn choose<'a>(&'a self, game: &'a CheckersGame) -> BoxFuture<'a, Result<Choice, AIError>> {
         Box::pin(self.select(game))
     }
 }

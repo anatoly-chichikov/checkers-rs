@@ -4,16 +4,16 @@ use std::future::Future;
 use std::pin::Pin;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+pub type Choice = ((usize, usize), (usize, usize));
+pub type MoveItem = ((usize, usize), (usize, usize), bool);
+pub type Moves = [MoveItem];
 
 pub trait RulesExplainer {
     fn explain<'a>(&'a self) -> BoxFuture<'a, Result<String, AIError>>;
 }
 
 pub trait MoveChooser {
-    fn choose<'a>(
-        &'a self,
-        game: &'a CheckersGame,
-    ) -> BoxFuture<'a, Result<((usize, usize), (usize, usize)), AIError>>;
+    fn choose<'a>(&'a self, game: &'a CheckersGame) -> BoxFuture<'a, Result<Choice, AIError>>;
 }
 
 pub trait HintGiver {
