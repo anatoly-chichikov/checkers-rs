@@ -1,18 +1,18 @@
 use crate::core::board::Board;
 
-pub fn format_square(row: usize, col: usize) -> String {
-    // Convert internal row (0=top, 7=bottom) to display row (8=top, 1=bottom)
+/// Converts board coordinates to algebraic square.
+pub fn square(row: usize, col: usize) -> String {
     format!("{}{}", (col as u8 + b'A') as char, 8 - row)
 }
 
-pub fn format_board(board: &Board) -> String {
+/// Renders board state into string grid.
+pub fn board(state: &Board) -> String {
     let mut board_str = String::new();
     board_str.push_str("  A B C D E F G H\n");
-    for r in 0..board.size {
-        // Convert internal row (0=top, 7=bottom) to display row (8=top, 1=bottom)
+    for r in 0..state.size {
         board_str.push_str(&format!("{} ", 8 - r));
-        for c in 0..board.size {
-            let piece_str: String = match board.get_piece(r, c) {
+        for c in 0..state.size {
+            let piece_str: String = match state.get_piece(r, c) {
                 Some(piece) => piece.display(),
                 None => ".".to_string(),
             };

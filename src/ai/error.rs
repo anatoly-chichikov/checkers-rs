@@ -13,7 +13,7 @@ pub enum AIError {
     NoModel,
     #[error("AI response format is invalid: {0}")]
     InvalidResponseFormat(String),
-    #[error("No possible moves available for the AI.")]
+    #[error("No possible moves available for the AI")]
     NoPossibleMoves,
     #[error("IO error: {0}")]
     IOError(#[from] io::Error),
