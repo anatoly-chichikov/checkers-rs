@@ -1,8 +1,7 @@
-use crate::core::board::Board;
-use crate::core::game_logic::{self, can_piece_capture};
-use crate::core::move_history::MoveHistory;
-use crate::core::piece::Color;
-use crate::core::GameMove;
+use crate::core::board::{Board, Grid};
+use crate::core::move_history::{Forge, History, HistorySeed, MoveHistory};
+use crate::core::piece::{Color, Piece, Side};
+use crate::core::{Move, Position};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,38 +20,79 @@ pub enum GameError {
 
 #[derive(Clone)]
 pub struct CheckersGame {
+    board: Board,
+    turn: Color,
+    end: bool,
+    history: MoveHistory,
+}
+
+pub struct GameSeed {
     pub board: Board,
-    pub current_player: Color,
-    pub is_game_over: bool,
-    pub move_history: MoveHistory,
+    pub turn: Color,
 }
 
-impl Default for CheckersGame {
-    fn default() -> Self {
-        Self::new()
-    }
+pub trait Seed {
+    /// Creates a game from the supplied seed values
+    fn make(self) -> CheckersGame;
 }
 
-impl CheckersGame {
-    pub fn new() -> Self {
-        let mut board = Board::new(8);
-        board.initialize();
-        Self {
-            board,
-            current_player: Color::White,
-            is_game_over: false,
-            move_history: MoveHistory::new(),
+pub trait Game {
+    /// Returns the current board
+    fn board(&self) -> &Board;
+    /// Returns the active player color
+    fn turn(&self) -> Color;
+    /// Returns true when the game has ended
+    fn end(&self) -> bool;
+    /// Returns the move history
+    fn history(&self) -> &MoveHistory;
+    /// Validates whether a piece can be selected
+    fn selection(&self, spot: Position) -> Result<(), GameError>;
+    /// Executes a move and returns the updated game and capture status
+    fn play(&self, step: Move) -> Result<(CheckersGame, bool), GameError>;
+    /// Returns true when the active player has captures available
+    fn captures(&self) -> bool;
+    /// Returns the winning color when the game is decided
+    fn winner(&self) -> Option<Color>;
+    /// Returns true when the active player is stalemated
+    fn stalemate(&self) -> bool;
+    /// Switches the active player
+    fn switch(&self) -> CheckersGame;
+    /// Marks the game as finished
+    fn finish(&self) -> CheckersGame;
+}
+
+impl Seed for GameSeed {
+    fn make(self) -> CheckersGame {
+        let history = HistorySeed { turns: Vec::new() }.make();
+        CheckersGame {
+            board: self.board,
+            turn: self.turn,
+            end: false,
+            history,
         }
     }
+}
 
-    pub fn validate_piece_selection(&self, row: usize, col: usize) -> Result<(), GameError> {
-        if !self.board.in_bounds(row, col) {
+impl Game for CheckersGame {
+    fn board(&self) -> &Board {
+        &self.board
+    }
+    fn turn(&self) -> Color {
+        self.turn
+    }
+    fn end(&self) -> bool {
+        self.end
+    }
+    fn history(&self) -> &MoveHistory {
+        &self.history
+    }
+    fn selection(&self, spot: Position) -> Result<(), GameError> {
+        if !self.board.bounds(spot) {
             return Err(GameError::OutOfBounds);
         }
-
-        match self.board.get_piece(row, col) {
-            Some(piece) if piece.color == self.current_player => {
-                if self.has_captures_available() && !can_piece_capture(&self.board, row, col) {
+        match self.board.piece(spot) {
+            Some(piece) if piece.color == self.turn => {
+                if self.captures() && !self.board.capture(spot) {
                     return Err(GameError::ForcedCaptureAvailable);
                 }
                 Ok(())
@@ -61,103 +101,77 @@ impl CheckersGame {
             None => Err(GameError::NoPieceSelected),
         }
     }
-
-    pub fn make_move(&self, game_move: GameMove) -> Result<(Self, bool), GameError> {
-        self.make_move_coords(
-            game_move.from.row,
-            game_move.from.col,
-            game_move.to.row,
-            game_move.to.col,
-        )
-    }
-
-    pub fn make_move_coords(
-        &self,
-        from_row: usize,
-        from_col: usize,
-        to_row: usize,
-        to_col: usize,
-    ) -> Result<(Self, bool), GameError> {
-        let mut new_game = self.clone();
-
-        if !new_game.board.in_bounds(to_row, to_col) {
+    fn play(&self, step: Move) -> Result<(CheckersGame, bool), GameError> {
+        let mut game = self.clone();
+        if !game.board.bounds(step.target) {
             return Err(GameError::OutOfBounds);
         }
-
-        let piece = new_game
+        let piece = game
             .board
-            .get_piece(from_row, from_col)
+            .piece(step.origin)
             .ok_or(GameError::NoPieceSelected)?;
-
-        if new_game.has_captures_available() {
-            let row_diff = (to_row as i32 - from_row as i32).abs();
-            if row_diff != 2 {
+        if game.captures() {
+            let span = (step.target.row as i32 - step.origin.row as i32).abs();
+            if span != 2 {
                 return Err(GameError::ForcedCaptureAvailable);
             }
         }
-
-        if !game_logic::is_valid_move(&new_game.board, from_row, from_col, to_row, to_col, &piece) {
+        if !game.board.validity(step.origin, step.target) {
             return Err(GameError::InvalidMove);
         }
-
-        let row_diff_abs = (to_row as i32 - from_row as i32).abs();
-        let mut captured = Vec::new();
-        if row_diff_abs == 2 {
-            let mid_row = (from_row + to_row) / 2;
-            let mid_col = (from_col + to_col) / 2;
-            captured.push((mid_row, mid_col));
-            new_game.board.set_piece(mid_row, mid_col, None);
+        let span = (step.target.row as i32 - step.origin.row as i32).abs();
+        let mut captures = Vec::new();
+        if span == 2 {
+            let mid = Position {
+                row: (step.origin.row + step.target.row) / 2,
+                col: (step.origin.col + step.target.col) / 2,
+            };
+            captures.push(mid);
+            game.board.place(mid, None);
         }
-
-        new_game
-            .board
-            .move_piece((from_row, from_col), (to_row, to_col));
-
-        let mut became_king = false;
-        if game_logic::should_promote(&piece, to_row, new_game.board.size) {
-            if let Some(mut promoted_piece) = new_game.board.get_piece(to_row, to_col) {
-                promoted_piece.promote_to_king();
-                new_game
-                    .board
-                    .set_piece(to_row, to_col, Some(promoted_piece));
-                became_king = true;
+        game.board.shift(step.origin, step.target);
+        let mut crown = false;
+        if !piece.king {
+            let edge = game.board.edge();
+            let permit = match piece.color {
+                Color::White => step.target.row == 0,
+                Color::Black => step.target.row == edge - 1,
+            };
+            if permit {
+                if let Some(piece) = game.board.piece(step.target) {
+                    let king = Piece {
+                        color: piece.color,
+                        king: true,
+                    };
+                    game.board.place(step.target, Some(king));
+                    crown = true;
+                }
             }
         }
-
-        // Record the move in history
-        new_game.move_history.add_move(
-            (from_row, from_col),
-            (to_row, to_col),
-            new_game.current_player,
-            captured,
-            became_king,
-        );
-
-        let continue_capture = row_diff_abs == 2
-            && game_logic::has_more_captures_for_piece(&new_game.board, to_row, to_col);
-
-        if !continue_capture {
-            new_game.current_player = new_game.current_player.opposite();
+        game.history = game.history.add(step, game.turn, captures, crown);
+        let chain = span == 2 && game.board.chain(step.target);
+        if !chain {
+            game.turn = game.turn.opponent();
         }
-
-        Ok((new_game, continue_capture))
+        Ok((game, chain))
     }
-
-    pub fn check_winner(&self) -> Option<Color> {
-        game_logic::check_winner(&self.board)
+    fn captures(&self) -> bool {
+        self.board.captures(self.turn)
     }
-
-    pub fn has_captures_available(&self) -> bool {
-        game_logic::has_captures_available(&self.board, self.current_player)
+    fn winner(&self) -> Option<Color> {
+        self.board.winner()
     }
-
-    pub fn is_stalemate(&self) -> bool {
-        game_logic::is_stalemate(&self.board, self.current_player)
+    fn stalemate(&self) -> bool {
+        self.board.stalemate(self.turn)
     }
-
-    pub fn with_switched_player(&self) -> Self {
-        let mut new_game = self.clone();
-        new_game.current_player = new_game.current_player.opposite();
-        new_game
+    fn switch(&self) -> CheckersGame {
+        let mut game = self.clone();
+        game.turn = game.turn.opponent();
+        game
+    }
+    fn finish(&self) -> CheckersGame {
+        let mut game = self.clone();
+        game.end = true;
+        game
     }
 }

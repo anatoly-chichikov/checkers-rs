@@ -1,3 +1,5 @@
+use crate::core::game::Game;
+use crate::core::piece::Side;
 use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -40,7 +42,6 @@ impl State for PieceSelectedState {
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor = session.ui_state.cursor_pos;
 
-                // Deselect if same piece
                 if cursor == self.selected_pos {
                     let deselected_session = session.deselect_piece();
                     return (
@@ -49,39 +50,34 @@ impl State for PieceSelectedState {
                     );
                 }
 
-                // Try move
                 if session.ui_state.possible_moves.contains(&cursor) {
                     match session.try_multicapture_move(cursor.0, cursor.1) {
                         Ok((mut updated_session, continue_capture, _positions)) => {
-                            // Clear hint after player move
                             updated_session.hint = None;
 
-                            // Check if multi-capture continues
                             if continue_capture {
-                                // Already selected in updated_session
                                 (
                                     updated_session,
                                     StateTransition::To(Box::new(super::MultiCaptureState::new(
                                         cursor,
                                     ))),
                                 )
-                            } else if updated_session.game.check_winner().is_some() {
+                            } else if updated_session.game.winner().is_some() {
                                 let mut game_over_session = updated_session.clone();
-                                game_over_session.game.is_game_over = true;
+                                game_over_session.game = game_over_session.game.finish();
                                 (
                                     game_over_session,
                                     StateTransition::To(Box::new(super::GameOverState::new(
-                                        updated_session.game.check_winner(),
+                                        updated_session.game.winner(),
                                     ))),
                                 )
-                            } else if updated_session.game.is_stalemate() {
-                                // If current player has no moves, the other player wins
+                            } else if updated_session.game.stalemate() {
                                 let mut game_over_session = updated_session.clone();
-                                game_over_session.game.is_game_over = true;
+                                game_over_session.game = game_over_session.game.finish();
                                 (
                                     game_over_session,
                                     StateTransition::To(Box::new(super::GameOverState::new(Some(
-                                        updated_session.game.current_player.opposite(),
+                                        updated_session.game.turn().opponent(),
                                     )))),
                                 )
                             } else {
@@ -103,8 +99,8 @@ impl State for PieceSelectedState {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
+            board: session.game.board(),
+            current_player: session.game.turn(),
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: Some(self.selected_pos),
             possible_moves: &session.ui_state.possible_moves,

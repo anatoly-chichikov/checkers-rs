@@ -1,3 +1,4 @@
+use crate::core::game::Game;
 use crate::core::piece::Color;
 use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -29,8 +30,8 @@ impl State for GameOverState {
         };
 
         ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
+            board: session.game.board(),
+            current_player: session.game.turn(),
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],

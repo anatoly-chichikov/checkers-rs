@@ -1,70 +1,77 @@
+use checkers_rs::core::board::Grid;
+use checkers_rs::core::game::Game;
 use checkers_rs::core::piece::Color;
+use checkers_rs::core::Position;
 use checkers_rs::state::states::GameOverState;
 use checkers_rs::state::{GameSession, State, StateTransition};
 use crossterm::event::{KeyCode, KeyEvent};
 
 #[test]
 fn test_game_over_state_displays_winner_message() {
-    let mut initial_session = GameSession::new();
-    initial_session.game.is_game_over = true;
-
+    let mut session = GameSession::new();
+    session.game = session.game.finish();
     let state = GameOverState::new(Some(Color::White));
-    let view_data = state.get_view_data(&initial_session);
-
-    assert!(view_data.is_game_over);
-    assert!(view_data.status_message.contains("White wins"));
+    let view = state.get_view_data(&session);
+    assert!(
+        view.is_game_over && view.status_message.contains("White wins"),
+        "winner message was not displayed"
+    );
 }
 
 #[test]
 fn test_game_over_state_displays_stalemate_message() {
-    let mut initial_session = GameSession::new();
-    initial_session.game.is_game_over = true;
-
+    let mut session = GameSession::new();
+    session.game = session.game.finish();
     let state = GameOverState::new(None);
-    let view_data = state.get_view_data(&initial_session);
-
-    assert!(view_data.is_game_over);
-    assert!(view_data.status_message.contains("Stalemate"));
+    let view = state.get_view_data(&session);
+    assert!(
+        view.is_game_over && view.status_message.contains("Stalemate"),
+        "stalemate message was not displayed"
+    );
 }
 
 #[test]
 fn test_game_over_state_exits_only_on_esc() {
-    let initial_session = GameSession::new();
+    let session = GameSession::new();
     let state = GameOverState::new(Some(Color::Black));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-    assert_eq!(transition, StateTransition::None);
-    assert_eq!(
-        new_session.game.board.cells,
-        initial_session.game.board.cells
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut flag = step == StateTransition::None;
+    let mut same = true;
+    for row in 0..8 {
+        for col in 0..8 {
+            let spot = Position { row, col };
+            same = same && result.game.board().piece(spot) == session.game.board().piece(spot);
+        }
+    }
+    let (_, exit) = state.handle_input(&session, KeyEvent::from(KeyCode::Esc));
+    let (_, other) = state.handle_input(&session, KeyEvent::from(KeyCode::Char('a')));
+    flag = flag && same && exit == StateTransition::Exit && other == StateTransition::None;
+    assert!(
+        flag,
+        "game over input handling did not match expected transitions"
     );
-
-    let (_, transition) = state.handle_input(&initial_session, KeyEvent::from(KeyCode::Esc));
-    assert_eq!(transition, StateTransition::Exit);
-
-    let (_, transition) = state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char('a')));
-    assert_eq!(transition, StateTransition::None);
 }
 
 #[test]
 fn test_game_over_state_shows_correct_winner_for_black() {
-    let mut initial_session = GameSession::new();
-    initial_session.game.is_game_over = true;
-
+    let mut session = GameSession::new();
+    session.game = session.game.finish();
     let state = GameOverState::new(Some(Color::Black));
-    let view_data = state.get_view_data(&initial_session);
-
-    assert!(view_data.status_message.contains("Black wins"));
+    let view = state.get_view_data(&session);
+    assert!(
+        view.status_message.contains("Black wins"),
+        "black winner message was not displayed"
+    );
 }
 
 #[test]
 fn test_game_over_state_shows_correct_winner_for_white() {
-    let mut initial_session = GameSession::new();
-    initial_session.game.is_game_over = true;
-
+    let mut session = GameSession::new();
+    session.game = session.game.finish();
     let state = GameOverState::new(Some(Color::White));
-    let view_data = state.get_view_data(&initial_session);
-
-    assert!(view_data.status_message.contains("White wins"));
+    let view = state.get_view_data(&session);
+    assert!(
+        view.status_message.contains("White wins"),
+        "white winner message was not displayed"
+    );
 }

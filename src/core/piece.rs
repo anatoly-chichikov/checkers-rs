@@ -4,8 +4,13 @@ pub enum Color {
     Black,
 }
 
-impl Color {
-    pub fn opposite(&self) -> Self {
+pub trait Side {
+    /// Returns the opposing color
+    fn opponent(&self) -> Self;
+}
+
+impl Side for Color {
+    fn opponent(&self) -> Self {
         match self {
             Color::White => Color::Black,
             Color::Black => Color::White,
@@ -16,23 +21,17 @@ impl Color {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Piece {
     pub color: Color,
-    pub is_king: bool,
+    pub king: bool,
 }
 
-impl Piece {
-    pub fn new(color: Color) -> Self {
-        Self {
-            color,
-            is_king: false,
-        }
-    }
+pub trait Face {
+    /// Returns the piece symbol for display
+    fn symbol(&self) -> String;
+}
 
-    pub fn promote_to_king(&mut self) {
-        self.is_king = true;
-    }
-
-    pub fn display(&self) -> String {
-        match (self.color, self.is_king) {
+impl Face for Piece {
+    fn symbol(&self) -> String {
+        match (self.color, self.king) {
             (Color::White, false) => "(w)".to_string(),
             (Color::White, true) => "[W]".to_string(),
             (Color::Black, false) => "(b)".to_string(),

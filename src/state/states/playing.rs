@@ -1,4 +1,7 @@
+use crate::core::board::Grid;
+use crate::core::game::Game;
 use crate::core::piece::Color;
+use crate::core::Position;
 use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -18,8 +21,7 @@ impl PlayingState {
 
 impl State for PlayingState {
     fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
-        // Check if it's AI's turn
-        if session.game.current_player == Color::Black {
+        if session.game.turn() == Color::Black {
             return (
                 session.clone(),
                 StateTransition::To(Box::new(super::AITurnState::new())),
@@ -45,14 +47,19 @@ impl State for PlayingState {
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
                 let cursor_pos = session.ui_state.cursor_pos;
-                if let Some(piece) = session.game.board.get_piece(cursor_pos.0, cursor_pos.1) {
-                    if piece.color == session.game.current_player
+                if let Some(piece) = session.game.board().piece(Position {
+                    row: cursor_pos.0,
+                    col: cursor_pos.1,
+                }) {
+                    if piece.color == session.game.turn()
                         && session
                             .game
-                            .validate_piece_selection(cursor_pos.0, cursor_pos.1)
+                            .selection(Position {
+                                row: cursor_pos.0,
+                                col: cursor_pos.1,
+                            })
                             .is_ok()
                     {
-                        // Select the piece before transitioning
                         if let Ok(session_with_selection) =
                             session.select_piece(cursor_pos.0, cursor_pos.1)
                         {
@@ -75,18 +82,22 @@ impl State for PlayingState {
     }
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
-        use crate::core::game_logic::get_pieces_with_captures;
-
-        let pieces_with_captures = if session.game.has_captures_available() {
-            get_pieces_with_captures(&session.game.board, session.game.current_player)
+        let takers = if session.game.captures() {
+            session
+                .game
+                .board()
+                .takers(session.game.turn())
+                .iter()
+                .map(|spot| (spot.row, spot.col))
+                .collect()
         } else {
             Vec::new()
         };
 
-        let status_message = if !pieces_with_captures.is_empty() {
+        let status_message = if !takers.is_empty() {
             format!(
                 "{} must capture!",
-                if session.game.current_player == Color::White {
+                if session.game.turn() == Color::White {
                     "White"
                 } else {
                     "Black"
@@ -95,7 +106,7 @@ impl State for PlayingState {
         } else {
             format!(
                 "{}'s turn",
-                if session.game.current_player == Color::White {
+                if session.game.turn() == Color::White {
                     "White"
                 } else {
                     "Black"
@@ -104,12 +115,12 @@ impl State for PlayingState {
         };
 
         ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
+            board: session.game.board(),
+            current_player: session.game.turn(),
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: session.ui_state.selected_piece,
             possible_moves: &session.ui_state.possible_moves,
-            pieces_with_captures,
+            pieces_with_captures: takers,
             status_message,
             show_ai_thinking: false,
             error_message: None,

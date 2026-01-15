@@ -1,174 +1,122 @@
-use checkers_rs::core::piece::Color;
+use checkers_rs::core::board::{BoardSeed, Grid, Seed as BoardSeedTrait};
+use checkers_rs::core::game::{Game, GameSeed, Seed as GameSeedTrait};
+use checkers_rs::core::piece::{Color, Piece};
+use checkers_rs::core::Position;
 use checkers_rs::state::states::AITurnState;
 use checkers_rs::state::{GameSession, State, StateTransition};
 use crossterm::event::{KeyCode, KeyEvent};
 
 #[test]
 fn test_ai_turn_state_shows_thinking_status() {
-    let mut initial_session = GameSession::new();
-    initial_session.game = initial_session.game.with_switched_player();
-    assert_eq!(initial_session.game.current_player, Color::Black);
-
+    let mut session = GameSession::new();
+    session.game = session.game.switch();
     let state = AITurnState::new();
-    let view_data = state.get_view_data(&initial_session);
-
-    assert!(view_data.show_ai_thinking);
-    assert_eq!(view_data.status_message, "AI is thinking...");
+    let view = state.get_view_data(&session);
+    assert!(
+        view.show_ai_thinking && view.status_message == "AI is thinking...",
+        "thinking status was not shown"
+    );
 }
 
 #[test]
 fn test_ai_turn_state_shows_ai_error_if_present() {
-    let mut initial_session = GameSession::new();
-    initial_session.game = initial_session.game.with_switched_player();
-    initial_session.ai_state = initial_session.ai_state.set_error("Test error".to_string());
-
+    let mut session = GameSession::new();
+    session.game = session.game.switch();
+    session.ai_state = session.ai_state.set_error("Test error".to_string());
     let state = AITurnState::new();
-    let view_data = state.get_view_data(&initial_session);
-
-    assert_eq!(view_data.error_message, Some("Test error"));
+    let view = state.get_view_data(&session);
+    assert!(
+        view.error_message == Some("Test error"),
+        "ai error was not displayed"
+    );
 }
 
 #[tokio::test]
 async fn test_ai_turn_state_makes_ai_move() {
-    // Ensure AI_TEST_MODE is set to use deterministic/mocked AI logic if available,
-    // preventing actual LLM calls or sleeps.
     std::env::set_var("AI_TEST_MODE", "1");
-
-    let mut initial_session = GameSession::new();
-    initial_session.game = initial_session.game.with_switched_player();
-    assert_eq!(initial_session.game.current_player, Color::Black);
-
+    let mut session = GameSession::new();
+    session.game = session.game.switch();
     let state = AITurnState::new();
-
-    // Call handle_input which should make a move immediately in test mode
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
-
-    // It's good practice to clean up env vars set by tests, though test runners often isolate.
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Char(' ')));
     std::env::remove_var("AI_TEST_MODE");
-
-    match transition {
-        StateTransition::To(next_state) => {
-            // Should transition to PlayingState
-            assert_eq!(
-                next_state.state_type(),
-                checkers_rs::state::StateType::Playing
-            );
-            assert_eq!(new_session.game.current_player, Color::White); // Player should switch
-
-            // Verify initial session unchanged
-            assert_eq!(initial_session.game.current_player, Color::Black);
-
-            // Verify a move was made - count pieces moved
-            let mut found_moved_piece = false;
-            for row in 0..8 {
-                for col in 0..8 {
-                    if let Some(piece) = new_session.game.board.get_piece(row, col) {
-                        if piece.color == Color::Black {
-                            // Check if this piece is not in starting position
-                            if row > 2 {
-                                found_moved_piece = true;
-                                break;
-                            }
-                        }
-                    }
+    let mut flag = false;
+    if let StateTransition::To(state) = &step {
+        flag = state.state_type() == checkers_rs::state::StateType::Playing;
+    }
+    let mut mark = false;
+    for row in 0..8 {
+        for col in 0..8 {
+            if let Some(piece) = result.game.board().piece(Position { row, col }) {
+                if piece.color == Color::Black && row > 2 {
+                    mark = true;
                 }
             }
-            assert!(found_moved_piece, "AI should have moved a piece");
         }
-        _ => panic!("Expected transition to PlayingState"),
     }
+    flag =
+        flag && result.game.turn() == Color::White && session.game.turn() == Color::Black && mark;
+    assert!(flag, "ai move did not transition or move a piece");
 }
 
 #[tokio::test]
 async fn test_ai_turn_state_transitions_to_game_over_if_no_moves() {
-    // Force test mode
     std::env::set_var("AI_TEST_MODE", "1");
-    let mut initial_session = GameSession::new();
-    initial_session.game = initial_session.game.with_switched_player();
-
-    // Clear the board and set up a scenario with no valid moves for Black
-    let mut cleared_board = initial_session.game.board.clone();
-    for row in 0..8 {
-        for col in 0..8 {
-            cleared_board.set_piece(row, col, None);
-        }
-    }
-
-    // Place one white piece that blocks all black moves
-    cleared_board.set_piece(
-        7,
-        7,
-        Some(checkers_rs::core::piece::Piece::new(Color::White)),
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 7, col: 7 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
     );
-
-    let mut new_game = initial_session.game.clone();
-    new_game.board = cleared_board;
-    initial_session.game = new_game;
-
-    let state = AITurnState::new();
-
-    // Should detect no valid moves and transition to GameOver
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
-
-    match transition {
-        StateTransition::To(next_state) => {
-            // Should go to GameOverState
-            assert_eq!(
-                next_state.state_type(),
-                checkers_rs::state::StateType::GameOver
-            );
-            assert!(new_session.game.is_game_over);
-            assert!(!initial_session.game.is_game_over);
-        }
-        _ => panic!("Expected transition to GameOverState"),
+    session.game = GameSeed {
+        board,
+        turn: Color::Black,
     }
+    .make();
+    let state = AITurnState::new();
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Char(' ')));
+    std::env::remove_var("AI_TEST_MODE");
+    let mut flag = false;
+    if let StateTransition::To(state) = &step {
+        flag = state.state_type() == checkers_rs::state::StateType::GameOver;
+    }
+    flag = flag && result.game.end() && !session.game.end();
+    assert!(flag, "ai turn did not end the game with no moves");
 }
 
 #[tokio::test]
 async fn test_ai_turn_state_simple_ai_makes_move_on_custom_board() {
     std::env::set_var("AI_TEST_MODE", "1");
-    let mut initial_session = GameSession::new();
-    initial_session.game = initial_session.game.with_switched_player();
-
-    let mut cleared_board = initial_session.game.board.clone();
-    for row in 0..8 {
-        for col in 0..8 {
-            cleared_board.set_piece(row, col, None);
-        }
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 5, col: 0 },
+        Some(Piece {
+            color: Color::Black,
+            king: false,
+        }),
+    );
+    board.place(
+        Position { row: 7, col: 2 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::Black,
     }
-
-    cleared_board.set_piece(
-        5,
-        0,
-        Some(checkers_rs::core::piece::Piece::new(Color::Black)),
-    );
-
-    cleared_board.set_piece(
-        7,
-        2,
-        Some(checkers_rs::core::piece::Piece::new(Color::White)),
-    );
-
-    let mut new_game = initial_session.game.clone();
-    new_game.board = cleared_board;
-    initial_session.game = new_game;
-
+    .make();
     let state = AITurnState::new();
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Char(' ')));
-
-    match transition {
-        StateTransition::To(next_state) => {
-            assert_eq!(
-                next_state.state_type(),
-                checkers_rs::state::StateType::Playing
-            );
-            assert_eq!(new_session.game.current_player, Color::White);
-            assert_eq!(initial_session.game.current_player, Color::Black);
-        }
-        _ => panic!("Expected transition to PlayingState"),
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Char(' ')));
+    std::env::remove_var("AI_TEST_MODE");
+    let mut flag = false;
+    if let StateTransition::To(state) = &step {
+        flag = state.state_type() == checkers_rs::state::StateType::Playing;
     }
+    flag = flag && result.game.turn() == Color::White && session.game.turn() == Color::Black;
+    assert!(flag, "ai move did not switch the turn");
 }
