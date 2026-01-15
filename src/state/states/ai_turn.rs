@@ -1,4 +1,7 @@
-use crate::core::piece::Color;
+use crate::core::board::Grid;
+use crate::core::game::Game;
+use crate::core::piece::{Color, Side};
+use crate::core::{Move, Position};
 use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::KeyEvent;
 
@@ -44,20 +47,27 @@ impl AITurnState {
         from: (usize, usize),
         to: (usize, usize),
     ) -> (GameSession, StateTransition) {
-        let game_move = crate::core::GameMove::from_tuples(from, to);
-        match new_session.game.make_move(game_move) {
+        let play = Move {
+            origin: Position {
+                row: from.0,
+                col: from.1,
+            },
+            target: Position {
+                row: to.0,
+                col: to.1,
+            },
+        };
+        match new_session.game.play(play) {
             Ok((updated_game, _)) => {
                 new_session.game = updated_game;
                 new_session.ai_state = new_session.ai_state.clear_error();
                 if let Some(ref agent_ref) = new_session.ai_agent {
-                    if new_session.game.current_player == Color::White
-                        && !new_session.game.is_game_over
-                    {
+                    if new_session.game.turn() == Color::White && !new_session.game.end() {
                         let hint_result = tokio::task::block_in_place(|| {
                             tokio::runtime::Handle::current().block_on(agent_ref.hint(
-                                &new_session.game.board,
+                                new_session.game.board(),
                                 Color::White,
-                                &new_session.game.move_history,
+                                new_session.game.history(),
                             ))
                         });
                         new_session.hint = hint_result
@@ -80,15 +90,15 @@ impl AITurnState {
 
     /// Handles post-move transitions.
     fn after(new_session: &mut GameSession) -> Option<StateTransition> {
-        let winner = new_session.game.check_winner();
+        let winner = new_session.game.winner();
         if winner.is_some() {
-            new_session.game.is_game_over = true;
+            new_session.game = new_session.game.finish();
             Some(StateTransition::To(Box::new(super::GameOverState::new(
                 winner,
             ))))
-        } else if new_session.game.is_stalemate() {
-            let winner = Some(new_session.game.current_player.opposite());
-            new_session.game.is_game_over = true;
+        } else if new_session.game.stalemate() {
+            let winner = Some(new_session.game.turn().opponent());
+            new_session.game = new_session.game.finish();
             Some(StateTransition::To(Box::new(super::GameOverState::new(
                 winner,
             ))))
@@ -100,7 +110,7 @@ impl AITurnState {
     /// Records AI failure and switches player.
     fn fail(mut new_session: GameSession, message: String) -> (GameSession, StateTransition) {
         new_session.ai_state = new_session.ai_state.set_error(message);
-        new_session.game = new_session.game.with_switched_player();
+        new_session.game = new_session.game.switch();
         (
             new_session,
             StateTransition::To(Box::new(super::PlayingState::new())),
@@ -110,12 +120,9 @@ impl AITurnState {
     /// Simple deterministic AI fallback.
     fn basic(session: &GameSession) -> (GameSession, StateTransition) {
         let mut new_session = session.clone();
-        let all_moves = crate::core::game_logic::get_all_valid_moves_for_player(
-            &new_session.game.board,
-            Color::Black,
-        );
+        let all_moves = new_session.game.board().choices(Color::Black);
         if all_moves.is_empty() {
-            new_session.game.is_game_over = true;
+            new_session.game = new_session.game.finish();
             return (
                 new_session,
                 StateTransition::To(Box::new(super::GameOverState::new(Some(Color::White)))),
@@ -123,7 +130,7 @@ impl AITurnState {
         }
         let captures: Vec<_> = all_moves
             .iter()
-            .filter(|(_, _, is_capture)| *is_capture)
+            .filter(|play| (play.target.row as i32 - play.origin.row as i32).abs() == 2)
             .cloned()
             .collect();
         let moves_to_consider = if !captures.is_empty() {
@@ -131,11 +138,8 @@ impl AITurnState {
         } else {
             all_moves
         };
-        let ((from_row, from_col), (to_row, to_col), _) = moves_to_consider[0];
-        match new_session
-            .game
-            .make_move_coords(from_row, from_col, to_row, to_col)
-        {
+        let play = moves_to_consider[0];
+        match new_session.game.play(play) {
             Ok((updated_game, _)) => {
                 new_session.game = updated_game;
                 new_session.ai_state = new_session.ai_state.clear_error();
@@ -172,8 +176,8 @@ impl State for AITurnState {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
+            board: session.game.board(),
+            current_player: session.game.turn(),
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],

@@ -1,59 +1,72 @@
-use crate::core::piece::Color as PieceColor;
+use crate::core::piece::Color;
+use crate::core::{Move, Position};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Move {
-    pub from: (usize, usize),
-    pub to: (usize, usize),
-    pub player: PieceColor,
-    pub captured: Vec<(usize, usize)>,
-    pub became_king: bool,
+pub struct Turn {
+    pub step: Move,
+    pub player: Color,
+    pub captures: Vec<Position>,
+    pub crown: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct MoveHistory {
-    moves: Vec<Move>,
+    turns: Vec<Turn>,
 }
 
-impl MoveHistory {
-    pub fn new() -> Self {
-        MoveHistory { moves: Vec::new() }
-    }
+pub struct HistorySeed {
+    pub turns: Vec<Turn>,
+}
 
-    pub fn add_move(
-        &mut self,
-        from: (usize, usize),
-        to: (usize, usize),
-        player: PieceColor,
-        captured: Vec<(usize, usize)>,
-        became_king: bool,
-    ) {
-        self.moves.push(Move {
-            from,
-            to,
+pub trait Forge {
+    /// Creates a history from the supplied turns
+    fn make(self) -> MoveHistory;
+}
+
+pub trait History {
+    /// Returns a new history with the supplied turn appended
+    fn add(&self, step: Move, player: Color, captures: Vec<Position>, crown: bool) -> MoveHistory;
+    /// Returns the move history in notation form
+    fn notation(&self) -> String;
+}
+
+impl History for MoveHistory {
+    fn add(&self, step: Move, player: Color, captures: Vec<Position>, crown: bool) -> MoveHistory {
+        let mut turns = self.turns.clone();
+        turns.push(Turn {
+            step,
             player,
-            captured,
-            became_king,
+            captures,
+            crown,
         });
+        MoveHistory { turns }
     }
-
-    pub fn to_notation(&self) -> String {
-        self.moves
+    fn notation(&self) -> String {
+        self.turns
             .iter()
             .enumerate()
-            .map(|(i, m)| {
-                let from = format!("{}{}", (b'a' + m.from.1 as u8) as char, 8 - m.from.0);
-                let to = format!("{}{}", (b'a' + m.to.1 as u8) as char, 8 - m.to.0);
-                let capture = if m.captured.is_empty() { "-" } else { "x" };
-                let king = if m.became_king { "K" } else { "" };
-                format!("{}. {}{}{}{}", i + 1, from, capture, to, king)
+            .map(|(index, turn)| {
+                let origin = format!(
+                    "{}{}",
+                    (b'a' + turn.step.origin.col as u8) as char,
+                    8 - turn.step.origin.row
+                );
+                let target = format!(
+                    "{}{}",
+                    (b'a' + turn.step.target.col as u8) as char,
+                    8 - turn.step.target.row
+                );
+                let mark = if turn.captures.is_empty() { "-" } else { "x" };
+                let crown = if turn.crown { "K" } else { "" };
+                format!("{}. {}{}{}{}", index + 1, origin, mark, target, crown)
             })
             .collect::<Vec<_>>()
             .join(" ")
     }
 }
 
-impl Default for MoveHistory {
-    fn default() -> Self {
-        Self::new()
+impl Forge for HistorySeed {
+    fn make(self) -> MoveHistory {
+        MoveHistory { turns: self.turns }
     }
 }

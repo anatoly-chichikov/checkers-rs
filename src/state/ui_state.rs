@@ -1,5 +1,5 @@
-use crate::core::board::Board;
-use crate::core::game_logic::get_all_possible_moves;
+use crate::core::board::{Board, Grid};
+use crate::core::Position;
 
 #[derive(Clone)]
 pub struct UIState {
@@ -59,7 +59,14 @@ impl UIState {
     pub fn select_piece(&self, pos: (usize, usize), board: &Board) -> Self {
         let mut new_state = self.clone();
         new_state.selected_piece = Some(pos);
-        new_state.possible_moves = get_all_possible_moves(board, pos.0, pos.1);
+        new_state.possible_moves = board
+            .moves(Position {
+                row: pos.0,
+                col: pos.1,
+            })
+            .into_iter()
+            .map(|spot| (spot.row, spot.col))
+            .collect();
         new_state
     }
 }

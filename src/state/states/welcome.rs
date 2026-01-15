@@ -1,3 +1,4 @@
+use crate::core::game::Game;
 use crate::state::{GameSession, State, StateTransition, StateType, ViewData};
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -25,10 +26,7 @@ impl WelcomeState {
 impl State for WelcomeState {
     fn handle_input(&self, session: &GameSession, key: KeyEvent) -> (GameSession, StateTransition) {
         let transition = match key.code {
-            KeyCode::Enter => {
-                // Transition to PlayingState
-                StateTransition::To(Box::new(super::PlayingState::new()))
-            }
+            KeyCode::Enter => StateTransition::To(Box::new(super::PlayingState::new())),
             KeyCode::Esc | KeyCode::Char('q') => StateTransition::Exit,
             _ => StateTransition::None,
         };
@@ -38,8 +36,8 @@ impl State for WelcomeState {
 
     fn get_view_data<'a>(&self, session: &'a GameSession) -> ViewData<'a> {
         ViewData {
-            board: &session.game.board,
-            current_player: session.game.current_player,
+            board: session.game.board(),
+            current_player: session.game.turn(),
             cursor_pos: session.ui_state.cursor_pos,
             selected_piece: None,
             possible_moves: &[],

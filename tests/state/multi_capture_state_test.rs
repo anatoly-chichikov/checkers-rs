@@ -1,4 +1,7 @@
+use checkers_rs::core::board::{BoardSeed, Grid, Seed as BoardSeedTrait};
+use checkers_rs::core::game::{Game, GameSeed, Seed as GameSeedTrait};
 use checkers_rs::core::piece::{Color, Piece};
+use checkers_rs::core::Position;
 use checkers_rs::state::states::MultiCaptureState;
 use checkers_rs::state::{GameSession, State, StateTransition};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -6,215 +9,289 @@ use crossterm::event::{KeyCode, KeyEvent};
 #[test]
 fn test_multi_capture_state_keeps_piece_selected() {
     let mut session = GameSession::new();
-
-    session.game.board.cells[4][3] = Some(Piece::new(Color::White));
-    session.game.current_player = Color::White;
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 4, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
     session.ui_state.selected_piece = Some((4, 3));
-
     let state = MultiCaptureState::new((4, 3));
-    let view_data = state.get_view_data(&session);
-
-    assert_eq!(view_data.selected_piece, Some((4, 3)));
-    assert_eq!(view_data.status_message, "You must continue capturing!");
+    let view = state.get_view_data(&session);
+    assert!(
+        view.selected_piece == Some((4, 3))
+            && view.status_message == "You must continue capturing!",
+        "selection was not preserved"
+    );
 }
 
 #[test]
 fn test_multi_capture_state_forces_capture_moves_only() {
-    let mut initial_session = GameSession::new();
-
-    initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[4][3] = Some(Piece::new(Color::White));
-    initial_session.game.board.cells[5][4] = Some(Piece::new(Color::Black));
-    initial_session.game.current_player = Color::White;
-    initial_session.ui_state.cursor_pos = (5, 4);
-    initial_session.ui_state.selected_piece = Some((4, 3));
-
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 4, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
+    );
+    board.place(
+        Position { row: 5, col: 4 },
+        Some(Piece {
+            color: Color::Black,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
+    session.ui_state.cursor_pos = (5, 4);
+    session.ui_state.selected_piece = Some((4, 3));
     let state = MultiCaptureState::new((4, 3));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-
-    assert_eq!(transition, StateTransition::None);
-    assert_eq!(
-        new_session.ui_state.selected_piece,
-        initial_session.ui_state.selected_piece
-    );
-    assert_eq!(
-        initial_session.game.board.cells,
-        new_session.game.board.cells
-    );
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut same = true;
+    for row in 0..8 {
+        for col in 0..8 {
+            let spot = Position { row, col };
+            same = same && result.game.board().piece(spot) == session.game.board().piece(spot);
+        }
+    }
+    let flag = step == StateTransition::None
+        && result.ui_state.selected_piece == session.ui_state.selected_piece
+        && same;
+    assert!(flag, "capture only rule did not hold");
 }
 
 #[test]
 fn test_multi_capture_state_completes_capture_sequence() {
-    // This test verifies that when a cursor position is NOT in possible moves,
-    // the state returns StateTransition::None
-    let mut initial_session = GameSession::new();
-
-    initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[2][3] = Some(Piece::new(Color::White));
-    initial_session.game.board.cells[3][4] = Some(Piece::new(Color::Black));
-    initial_session.game.current_player = Color::White;
-    initial_session.ui_state.cursor_pos = (4, 5);
-    initial_session.ui_state.selected_piece = Some((2, 3));
-    // Don't add (4,5) to possible moves - simulating an invalid move attempt
-    initial_session.ui_state.possible_moves = vec![];
-
-    let state = MultiCaptureState::new((2, 3));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-
-    // Since cursor is not in possible moves, should return None
-    assert_eq!(transition, StateTransition::None);
-    assert_eq!(
-        new_session.game.board.cells,
-        initial_session.game.board.cells
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 2, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
     );
+    board.place(
+        Position { row: 3, col: 4 },
+        Some(Piece {
+            color: Color::Black,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
+    session.ui_state.cursor_pos = (4, 5);
+    session.ui_state.selected_piece = Some((2, 3));
+    session.ui_state.possible_moves = vec![];
+    let state = MultiCaptureState::new((2, 3));
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut same = true;
+    for row in 0..8 {
+        for col in 0..8 {
+            let spot = Position { row, col };
+            same = same && result.game.board().piece(spot) == session.game.board().piece(spot);
+        }
+    }
+    let flag = step == StateTransition::None && same;
+    assert!(flag, "invalid capture sequence did not remain idle");
 }
 
 #[test]
 fn test_multi_capture_state_continues_if_more_captures() {
-    // Test that when cursor is in possible moves but move fails,
-    // we get StateTransition::None
-    let mut initial_session = GameSession::new();
-
-    initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[2][1] = Some(Piece::new(Color::White));
-    initial_session.game.board.cells[3][2] = Some(Piece::new(Color::Black));
-    initial_session.game.current_player = Color::White;
-    initial_session.ui_state.cursor_pos = (4, 3);
-    initial_session.ui_state.selected_piece = Some((2, 1));
-    // Add an invalid position to possible moves to test error handling
-    initial_session.ui_state.possible_moves = vec![(4, 3)];
-
-    let state = MultiCaptureState::new((2, 1));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-
-    // If try_multicapture_move returns an error, we should get None
-    // This happens when the move is in possible_moves but isn't actually valid
-    if matches!(transition, StateTransition::None) {
-        // This is expected if the move failed
-        assert_eq!(
-            new_session.game.board.cells,
-            initial_session.game.board.cells
-        );
-    } else {
-        // If the move succeeded, verify the transition
-        match transition {
-            StateTransition::To(next_state) => {
-                assert!(
-                    next_state.state_type() == checkers_rs::state::StateType::MultiCapture
-                        || next_state.state_type() == checkers_rs::state::StateType::Playing
-                );
-            }
-            _ => panic!("Unexpected transition type"),
-        }
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 2, col: 1 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
+    );
+    board.place(
+        Position { row: 3, col: 2 },
+        Some(Piece {
+            color: Color::Black,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
     }
+    .make();
+    session.ui_state.cursor_pos = (4, 3);
+    session.ui_state.selected_piece = Some((2, 1));
+    session.ui_state.possible_moves = vec![(4, 3)];
+    let state = MultiCaptureState::new((2, 1));
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut flag = false;
+    match &step {
+        StateTransition::None => {
+            let mut same = true;
+            for row in 0..8 {
+                for col in 0..8 {
+                    let spot = Position { row, col };
+                    same =
+                        same && result.game.board().piece(spot) == session.game.board().piece(spot);
+                }
+            }
+            flag = same;
+        }
+        StateTransition::To(state) => {
+            let kind = state.state_type();
+            flag = kind == checkers_rs::state::StateType::MultiCapture
+                || kind == checkers_rs::state::StateType::Playing;
+        }
+        _ => {}
+    }
+    assert!(
+        flag,
+        "multi capture continuation did not match expected result"
+    );
 }
 
 #[test]
 fn test_multi_capture_state_transitions_to_game_over() {
-    // Test that invalid moves return StateTransition::None
-    let mut initial_session = GameSession::new();
-
-    initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[2][3] = Some(Piece::new(Color::White));
-    initial_session.game.board.cells[3][4] = Some(Piece::new(Color::Black));
-    initial_session.game.current_player = Color::White;
-    initial_session.ui_state.cursor_pos = (4, 5);
-    initial_session.ui_state.selected_piece = Some((2, 3));
-    // Empty possible moves means no valid moves
-    initial_session.ui_state.possible_moves = vec![];
-
-    let state = MultiCaptureState::new((2, 3));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-
-    // Should return None since cursor is not in possible moves
-    assert_eq!(transition, StateTransition::None);
-    assert_eq!(
-        new_session.game.board.cells,
-        initial_session.game.board.cells
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 2, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
     );
+    board.place(
+        Position { row: 3, col: 4 },
+        Some(Piece {
+            color: Color::Black,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
+    session.ui_state.cursor_pos = (4, 5);
+    session.ui_state.selected_piece = Some((2, 3));
+    session.ui_state.possible_moves = vec![];
+    let state = MultiCaptureState::new((2, 3));
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut same = true;
+    for row in 0..8 {
+        for col in 0..8 {
+            let spot = Position { row, col };
+            same = same && result.game.board().piece(spot) == session.game.board().piece(spot);
+        }
+    }
+    let flag = step == StateTransition::None && same;
+    assert!(flag, "game over transition did not remain idle");
 }
 
 #[test]
 fn test_multi_capture_state_cursor_movement() {
-    let initial_session = GameSession::new();
+    let session = GameSession::new();
     let state = MultiCaptureState::new((4, 3));
-
-    let initial_pos = initial_session.ui_state.cursor_pos;
-
-    let (session_after_up, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Up));
-    assert_eq!(
-        session_after_up.ui_state.cursor_pos,
-        (initial_pos.0.saturating_sub(1), initial_pos.1)
-    );
-    assert_eq!(transition, StateTransition::None);
-
-    let (session_after_right, transition) =
-        state.handle_input(&session_after_up, KeyEvent::from(KeyCode::Right));
-    assert_eq!(
-        session_after_right.ui_state.cursor_pos,
-        (initial_pos.0.saturating_sub(1), (initial_pos.1 + 1).min(7))
-    );
-    assert_eq!(transition, StateTransition::None);
+    let start = session.ui_state.cursor_pos;
+    let rise = (start.0.saturating_sub(1), start.1);
+    let shift = (rise.0, (rise.1 + 1).min(7));
+    let (session, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Up));
+    let (session, phase) = state.handle_input(&session, KeyEvent::from(KeyCode::Right));
+    let flag = step == StateTransition::None
+        && phase == StateTransition::None
+        && session.ui_state.cursor_pos == shift;
+    assert!(flag, "cursor movement did not update correctly");
 }
 
 #[test]
 fn test_multi_capture_state_ignores_non_capture_moves() {
-    let mut initial_session = GameSession::new();
-
-    initial_session.game.board.cells = vec![vec![None; 8]; 8];
-    initial_session.game.board.cells[4][3] = Some(Piece::new(Color::White));
-    initial_session.game.current_player = Color::White;
-    initial_session.ui_state.cursor_pos = (5, 4);
-    initial_session.ui_state.selected_piece = Some((4, 3));
-    // Don't add (5,4) to possible moves - it's not a capture
-    initial_session.ui_state.possible_moves = vec![];
-
-    let state = MultiCaptureState::new((4, 3));
-
-    let (new_session, transition) =
-        state.handle_input(&initial_session, KeyEvent::from(KeyCode::Enter));
-
-    assert_eq!(transition, StateTransition::None);
-    assert!(new_session.game.board.get_piece(4, 3).is_some());
-    assert_eq!(
-        new_session.game.board.cells,
-        initial_session.game.board.cells
+    let mut session = GameSession::new();
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 4, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
     );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
+    session.ui_state.cursor_pos = (5, 4);
+    session.ui_state.selected_piece = Some((4, 3));
+    session.ui_state.possible_moves = vec![];
+    let state = MultiCaptureState::new((4, 3));
+    let (result, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Enter));
+    let mut same = true;
+    for row in 0..8 {
+        for col in 0..8 {
+            let spot = Position { row, col };
+            same = same && result.game.board().piece(spot) == session.game.board().piece(spot);
+        }
+    }
+    let flag = step == StateTransition::None
+        && result
+            .game
+            .board()
+            .piece(Position { row: 4, col: 3 })
+            .is_some()
+        && same;
+    assert!(flag, "non capture move was not ignored");
 }
 
 #[test]
 fn test_multi_capture_state_no_exit_key() {
-    let initial_session = GameSession::new();
+    let session = GameSession::new();
     let state = MultiCaptureState::new((4, 3));
-
-    let (_, transition) = state.handle_input(&initial_session, KeyEvent::from(KeyCode::Esc));
-    assert_eq!(transition, StateTransition::None);
+    let (_, step) = state.handle_input(&session, KeyEvent::from(KeyCode::Esc));
+    assert!(
+        step == StateTransition::None,
+        "exit key was accepted during multi capture"
+    );
 }
 
 #[test]
 fn test_multi_capture_state_view_data() {
     let mut session = GameSession::new();
-
-    session.game.board.cells[4][3] = Some(Piece::new(Color::White));
-    session.game.current_player = Color::White;
+    let mut board = BoardSeed { size: 8 }.make();
+    board.place(
+        Position { row: 4, col: 3 },
+        Some(Piece {
+            color: Color::White,
+            king: false,
+        }),
+    );
+    session.game = GameSeed {
+        board,
+        turn: Color::White,
+    }
+    .make();
     session.ui_state.cursor_pos = (5, 4);
     session.ui_state.selected_piece = Some((4, 3));
-
     let state = MultiCaptureState::new((4, 3));
-    let view_data = state.get_view_data(&session);
-
-    assert_eq!(view_data.selected_piece, Some((4, 3)));
-    assert_eq!(view_data.cursor_pos, (5, 4));
-    assert_eq!(view_data.status_message, "You must continue capturing!");
-    assert!(!view_data.show_ai_thinking);
-    assert!(view_data.error_message.is_none());
+    let view = state.get_view_data(&session);
+    let flag = view.selected_piece == Some((4, 3))
+        && view.cursor_pos == (5, 4)
+        && view.status_message == "You must continue capturing!"
+        && !view.show_ai_thinking
+        && view.error_message.is_none();
+    assert!(flag, "view data did not match expected values");
 }

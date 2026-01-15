@@ -3,10 +3,9 @@ use crate::ai::contract::{BoxFuture, Choice, HintGiver, MoveChooser, Moves, Rule
 use crate::ai::error::AIError;
 use crate::ai::formatting::{board, square};
 use crate::ai::ui::{animate_start, animate_start_with_message, animate_stop};
-use crate::core::board::Board;
-use crate::core::game::CheckersGame;
-use crate::core::game_logic::get_all_valid_moves_for_player;
-use crate::core::move_history::MoveHistory;
+use crate::core::board::{Board, Grid};
+use crate::core::game::{CheckersGame, Game};
+use crate::core::move_history::{History, MoveHistory};
 use crate::core::piece::Color as PieceColor;
 use crate::interface::messages;
 use crate::utils::prompts::{get_ai_move_prompt, get_hint_prompt};
@@ -49,16 +48,16 @@ impl GeminiAI {
     /// Selects a move for the current black player.
     async fn select(&self, game: &CheckersGame) -> Result<Choice, AIError> {
         dotenv::dotenv().ok();
-        if game.current_player != PieceColor::Black {
+        if game.turn() != PieceColor::Black {
             return Err(AIError::InvalidResponseFormat(
                 "AI can only play as black".to_string(),
             ));
         }
-        let possible_moves = get_all_valid_moves_for_player(&game.board, game.current_player);
+        let possible_moves = game.board().choices(game.turn());
         if possible_moves.is_empty() {
             return Err(AIError::NoPossibleMoves);
         }
-        let prompt = Self::movelist(&possible_moves, &game.board);
+        let prompt = Self::movelist(&possible_moves, game.board());
         let client = self.client();
         let chat_req = ChatRequest::new(vec![ChatMessage::user(prompt)]);
         let chat_options = ChatOptions::default()
@@ -74,7 +73,10 @@ impl GeminiAI {
             Some(text_response) => {
                 let index = Self::parse(text_response, possible_moves.len())?;
                 let chosen_move = &possible_moves[index - 1];
-                Ok((chosen_move.0, chosen_move.1))
+                Ok((
+                    (chosen_move.origin.row, chosen_move.origin.col),
+                    (chosen_move.target.row, chosen_move.target.col),
+                ))
             }
             None => Err(AIError::ParseError(
                 "No text content in response".to_string(),
@@ -127,15 +129,14 @@ impl GeminiAI {
     fn movelist(possible_moves: &Moves, board_state: &Board) -> String {
         let board_representation = board(board_state);
         let mut moves_str = String::new();
-        for (i, ((from_row, from_col), (to_row, to_col), is_capture)) in
-            possible_moves.iter().enumerate()
-        {
-            let from_sq = square(*from_row, *from_col);
-            let to_sq = square(*to_row, *to_col);
+        for (i, play) in possible_moves.iter().enumerate() {
+            let from_sq = square(play.origin.row, play.origin.col);
+            let to_sq = square(play.target.row, play.target.col);
             let mut move_desc = format!("{}. {} to {}", i + 1, from_sq, to_sq);
-            if *is_capture {
-                let mid_row = (from_row + to_row) / 2;
-                let mid_col = (from_col + to_col) / 2;
+            let span = (play.target.row as i32 - play.origin.row as i32).abs();
+            if span == 2 {
+                let mid_row = (play.origin.row + play.target.row) / 2;
+                let mid_col = (play.origin.col + play.target.col) / 2;
                 let captured_sq = square(mid_row, mid_col);
                 move_desc.push_str(&format!(" (captures piece at {captured_sq})"));
             }
@@ -151,13 +152,14 @@ impl GeminiAI {
     /// Renders prompt for hint generation.
     fn hintprompt(board_state: &Board, player: PieceColor, history: &MoveHistory) -> String {
         let board_text = board(board_state);
-        let move_history = history.to_notation();
-        let possible_moves = get_all_valid_moves_for_player(board_state, player);
+        let move_history = history.notation();
+        let possible_moves = board_state.choices(player);
         let mut moves_str = String::new();
-        for ((from_row, from_col), (to_row, to_col), is_capture) in possible_moves.iter() {
-            let from_sq = square(*from_row, *from_col);
-            let to_sq = square(*to_row, *to_col);
-            let move_type = if *is_capture { "capture" } else { "move" };
+        for play in possible_moves.iter() {
+            let from_sq = square(play.origin.row, play.origin.col);
+            let to_sq = square(play.target.row, play.target.col);
+            let span = (play.target.row as i32 - play.origin.row as i32).abs();
+            let move_type = if span == 2 { "capture" } else { "move" };
             moves_str.push_str(&format!("- {from_sq} to {to_sq} ({move_type})\n"));
         }
         let template = get_hint_prompt();

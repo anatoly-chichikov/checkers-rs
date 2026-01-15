@@ -5,7 +5,9 @@ use ratatui::{
     widgets::Widget,
 };
 
-use crate::core::{board::Board, piece::Color as PieceColor};
+use crate::core::board::{Board, Grid};
+use crate::core::piece::Color as PieceColor;
+use crate::core::Position;
 use crate::interface::theme::Theme;
 
 pub struct CheckerBoard<'a> {
@@ -48,7 +50,7 @@ impl<'a> CheckerBoard<'a> {
     }
 
     fn render_cell(&self, buf: &mut Buffer, x: u16, y: u16, row: usize, col: usize) {
-        let piece = self.board.get_piece(row, col);
+        let piece = self.board.piece(Position { row, col });
         let is_possible_move = self.possible_moves.contains(&(row, col));
         let must_capture = self.pieces_with_captures.contains(&(row, col));
 
@@ -72,7 +74,7 @@ impl<'a> CheckerBoard<'a> {
                 }
             }
             Some(p) => {
-                let piece_char = match (p.color, p.is_king) {
+                let piece_char = match (p.color, p.king) {
                     (PieceColor::Black, false) => "(b)",
                     (PieceColor::Black, true) => "(B)",
                     (PieceColor::White, false) => "(w)",

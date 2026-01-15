@@ -1,12 +1,13 @@
 use crate::ai::AIError;
-use crate::core::{board::Board, game::CheckersGame, move_history::MoveHistory, piece::Color};
+use crate::core::{
+    board::Board, game::CheckersGame, move_history::MoveHistory, piece::Color, Move,
+};
 use std::future::Future;
 use std::pin::Pin;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 pub type Choice = ((usize, usize), (usize, usize));
-pub type MoveItem = ((usize, usize), (usize, usize), bool);
-pub type Moves = [MoveItem];
+pub type Moves = [Move];
 
 pub trait RulesExplainer {
     fn explain<'a>(&'a self) -> BoxFuture<'a, Result<String, AIError>>;

@@ -1,4 +1,5 @@
 use crate::ai::{load, AIError, Agent, GeminiAI};
+use crate::core::game::Game;
 use crate::core::piece::Color;
 use crate::interface::ui_ratatui::{Input, UI};
 use crate::state::states::{WelcomeContent, WelcomeState};
@@ -120,7 +121,7 @@ impl Application {
             self.state_machine.current_state_type(),
             StateType::AITurn
                 | StateType::Playing
-                    if self.session.game.current_player == Color::Black
+                    if self.session.game.turn() == Color::Black
         )
     }
 
